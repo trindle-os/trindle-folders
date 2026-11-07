@@ -1,0 +1,29 @@
+# Folders: what the built-in viewer and the preview panel say about a file they cannot show: unplayable media, unreadable files and pictures, and the kinds of file named for a broken one.
+
+folders-viewer-no-ffmpeg = Videos and sounds are played here by ffmpeg, which is not installed on this computer.
+folders-viewer-unplayable = This cannot be played. It may be damaged, or of a kind ffmpeg cannot play.
+folders-viewer-kind-pdf = PDF document
+folders-viewer-kind-png = PNG picture
+folders-viewer-kind-jpeg = JPEG picture
+folders-viewer-kind-gif = GIF picture
+folders-viewer-kind-webp = WebP picture
+folders-viewer-kind-zip = zip file
+folders-viewer-kind-gzip = gzip file
+folders-viewer-kind-xz = xz file
+folders-viewer-kind-zstd = zstd file
+folders-viewer-kind-7z = 7z archive
+folders-viewer-kind-rar = RAR archive
+folders-viewer-kind-bzip2 = bzip2 file
+folders-viewer-kind-cab = CAB archive
+folders-viewer-kind-deb = Debian package
+folders-viewer-kind-rpm = RPM package
+folders-viewer-kind-media = video or sound file
+folders-viewer-kind-video = video file
+folders-viewer-kind-ogg = Ogg file
+folders-viewer-kind-flac = FLAC sound file
+folders-viewer-kind-wav = WAV sound file
+folders-viewer-kind-mp3 = MP3 sound file
+folders-viewer-picture-unread = This picture could not be read.
+folders-viewer-gone = This file is no longer there.
+folders-viewer-denied = You do not have permission to read this file.
+folders-viewer-read-failed = This file could not be read: { $why }.

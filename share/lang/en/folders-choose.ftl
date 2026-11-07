@@ -1,0 +1,13 @@
+folders-choose-title-open = Open a file
+folders-choose-title-save = Save
+folders-choose-title-folder = Choose a folder
+folders-choose-name = Name
+folders-choose-kinds = Kind of file
+folders-choose-cancel = Cancel
+folders-choose-open = Open
+folders-choose-save = Save
+folders-choose-folder = Choose this folder
+folders-choose-replace = Replace
+folders-choose-taken = There is already a file called { $name } here.
+folders-choose-no-name = Type a name for the file.
+folders-choose-slash = A name cannot have / in it.

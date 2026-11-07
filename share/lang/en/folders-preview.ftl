@@ -1,0 +1,46 @@
+# The quick look in Folders: the window that shows a picture, text, PDF, font, sound or video when Space is pressed (src/files/preview.rs).
+
+folders-preview-page-failed = Page { $page } could not be drawn.
+folders-preview-rest-failed = The rest could not be read: { $why }
+folders-preview-fetch-failed = It could not be fetched: { $why }
+folders-preview-broken = Its name says it is a { $what }, but it is not one inside. It may be damaged or cut short.
+folders-preview-too-large-pixels = This picture is too large to show here: { $millions } million pixels.
+folders-preview-too-large-bytes = This picture is too large to show here: { $size }.
+folders-preview-other = This kind of file cannot be shown here. Open it in its app to see it.
+folders-preview-unread = It could not be read: { $why }
+folders-preview-read-more = Read the next part
+folders-preview-text = { $encoding }
+folders-preview-text-so-far = { $encoding }, the first { $size } so far
+folders-preview-picture-size = { $w } by { $h } pixels
+folders-preview-page = Page { $page }
+folders-preview-page-of = Page { $page } of { $pages }
+folders-preview-page-before = The page before (Page Up)
+folders-preview-page-after = The page after (Page Down)
+folders-preview-pdf = PDF document
+folders-preview-drawing = Drawing the page…
+folders-preview-font-installed = Installed for you: apps started from now on can use it.
+folders-preview-font-install = Install it for you
+folders-preview-unplayable = This cannot be played. It may be damaged, or of a kind ffmpeg cannot play.
+folders-preview-video = { $w } by { $h }
+folders-preview-video-length = { $w } by { $h }, { $length }
+folders-preview-sound = Sound
+folders-preview-sound-length = { $length }
+folders-preview-close = Close (Space)
+folders-preview-file-before = The file before (Left)
+folders-preview-file-after = The file after (Right)
+folders-preview-open = Open in its app
+folders-preview-picture = The picture
+folders-preview-video-name = The video
+folders-preview-sound-name = A sound
+folders-preview-pause = Pause (Space)
+folders-preview-play = Play (Space)
+folders-preview-position = Where it has got to
+folders-preview-unmute = Turn the sound back on
+folders-preview-mute = Mute
+folders-preview-volume = Volume
+
+folders-preview-kind-text = Text, { $encoding }
+folders-preview-kind-text-so-far = Text, { $encoding }, the first { $size } so far
+folders-preview-kind-video = Video, { $w } by { $h }
+folders-preview-kind-video-length = Video, { $w } by { $h }, { $length }
+folders-preview-kind-sound-length = Sound, { $length }

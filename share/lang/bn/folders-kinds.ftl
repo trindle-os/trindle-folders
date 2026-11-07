@@ -1,0 +1,3 @@
+
+
+folders-kinds-home = হোম

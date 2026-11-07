@@ -1,0 +1,13 @@
+# What Folders needs on the computer to do everything it offers; a line is a Debian package and what it is for.
+bubblewrap          # the box strangers' archives, SVG drawings, PDFs and films are read in
+ffmpeg              # thumbnails and details of films and sounds (ffmpeg and ffprobe)
+poppler-utils       # thumbnails of PDF pages (pdftoppm)
+udisks2             # drives: mounting and ejecting
+cifs-utils          # mount.cifs: Windows and Samba shares open as ordinary folders
+nfs-common          # mount.nfs: NFS exports opened by address (nfs://server/export) show as ordinary folders
+smbclient           # lists the shared folders on a Windows or Samba computer
+openssh-client      # ssh and sftp places
+sshfs               # sftp places as ordinary folders
+libarchive13t64     # reads RAR, disc images and the other archives Folders has no reader of its own for
+xdg-utils           # xdg-open
+trindle-toolkit-lang

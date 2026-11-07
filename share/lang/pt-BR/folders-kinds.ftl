@@ -1,0 +1,4 @@
+
+
+folders-kinds-home = Início
+

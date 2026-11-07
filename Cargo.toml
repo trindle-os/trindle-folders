@@ -1,0 +1,58 @@
+[package]
+name = "trindle-folders"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.89"
+license = "GPL-3.0-or-later"
+description = "Folders for Trindle: a file manager with two panes, tabs, archives, drives and network places"
+
+[dependencies]
+trindle-toolkit = { git = "https://github.com/trindle-os/trindle-toolkit", rev = "3b1e06bc4d4ccb94b9d7b876feecc37aa4765e74" }
+trindle-common = { git = "https://github.com/trindle-os/trindle-toolkit", rev = "3b1e06bc4d4ccb94b9d7b876feecc37aa4765e74" }
+libc = "0.2"
+zbus = "5"
+futures-lite = "2"
+serde = "1"
+zeroize = "1.9"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp", "bmp", "tiff", "gif"] }
+tiny-skia = { version = "0.12", default-features = false, features = ["std", "simd"] }
+resvg = { version = "0.49", default-features = false }
+flate2 = "1"
+serde_json = "1"
+tar = { version = "0.4.46", default-features = false }
+bzip2 = "0.6.1"
+deflate64 = "=0.1.10"
+lzma-rust2 = { version = "=0.13.0", default-features = false, features = ["std", "xz", "encoder"] }
+kamadak-exif = "0.6.1"
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
+ring = "0.17"
+rustls-native-certs = "0.8.4"
+sha2 = "0.10.9"
+md-5 = "0.10.6"
+blocking = "=1.6.2"
+ab_glyph = "0.2"
+skrifa = "0.44"
+aes = "0.8.4"
+cbc = "0.1.2"
+blake2 = "0.10.6"
+encoding_rs = "=0.8.35"
+quick-xml = "0.41"
+getrandom = "0.3"
+wayland-client = "0.31"
+wayland-protocols = { version = "0.32", features = ["client", "staging", "unstable"] }
+
+[build-dependencies]
+trindle-common = { git = "https://github.com/trindle-os/trindle-toolkit", rev = "3b1e06bc4d4ccb94b9d7b876feecc37aa4765e74" }
+
+[dev-dependencies]
+trindle-toolkit = { git = "https://github.com/trindle-os/trindle-toolkit", rev = "3b1e06bc4d4ccb94b9d7b876feecc37aa4765e74", features = ["testing"] }
+rcgen = { version = "0.13", default-features = false, features = ["ring", "pem"] }
+tempfile = "3"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 4
+strip = "debuginfo"
+panic = "abort"
+overflow-checks = true

@@ -1,0 +1,33 @@
+# Folders: the preview panel at the right of the window, with the facts it lists and the quiet words it says when a file cannot be shown.
+
+folders-panel-working = working out…
+folders-panel-too-narrow = The window is too narrow for the preview panel
+folders-panel-too-narrow-said = The window is too narrow for the preview panel.
+folders-panel-home = Home
+folders-panel-home-under = Home/{ $rest }
+folders-panel-keep-failed = The preview panel could not be kept for next time.
+folders-panel-fact-holds = Holds
+folders-panel-fact-size = Size
+folders-panel-fact-changed = Changed
+folders-panel-fact-where = Where
+folders-panel-fact-kind = Kind
+folders-panel-fact-unpacked = Unpacked
+folders-panel-fact-pixels = Pixels
+folders-panel-fact-camera = Camera
+folders-panel-fact-pages = Pages
+folders-panel-fact-length = Length
+folders-panel-fact-title = Title
+folders-panel-fact-artist = Artist
+folders-panel-fact-album = Album
+folders-panel-fact-font = Font
+folders-panel-unread = could not be read
+folders-panel-locked = locked with a password
+folders-panel-in-all = { $items } in all
+folders-panel-by = { $w } by { $h }
+folders-panel-broken = Its name says it is a { $what }, but it is not one inside.
+folders-panel-too-large = This picture is too large to show here.
+folders-panel-read-failed = It could not be read: { $why }
+folders-panel-selected = { $count } selected
+folders-panel-edge = Drag to make the preview wider or narrower, or press to step its width
+folders-panel-picture-name = A picture of { $name }
+folders-panel-text-name = The start of { $name }
