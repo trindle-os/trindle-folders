@@ -1,4 +1,4 @@
-// The question, the buttons, undo and redo, the Trash and what is cut.
+//! The question, the buttons, undo and redo, the Trash and what is cut.
 
 use std::fs;
 
@@ -246,5 +246,29 @@ fn deleting_asks_first_and_the_trash_can_be_undone() {
     f.ask_about(vec![dir.join("Trash/files/keep.txt")]);
     f.update(Msg::DeleteSure);
     assert!(f.undo.is_empty() && !dir.join("Trash/files/keep.txt").exists());
+    fs::remove_dir_all(&dir).unwrap();
+}
+
+#[test]
+fn a_refused_delete_keeps_undo_and_escape_drops_the_whole_question() {
+    let dir = folder("refused-delete");
+    let a = dir.join("left/a.txt");
+    fs::write(&a, b"a").unwrap();
+    let mut f = files(&dir);
+    f.remember("Undo making a.txt".into(), vec![Step::Remove(a.clone())]);
+    let mut moving = super::super::Job::sample(9, "Moving a.txt", 1, 0);
+    moving.from = vec![a.clone()];
+    f.jobs.push(moving);
+    f.confirm = Some(vec![a.clone()]);
+    f.update(Msg::DeleteSure);
+    assert!(a.exists());
+    assert_eq!(f.undo.len(), 1, "a delete that never started forgot the Undo");
+    f.jobs.clear();
+    f.update(Msg::EmptyTrash);
+    pick(&mut f, 0, "a.txt");
+    f.update(Msg::Delete);
+    assert!(f.confirm.is_some() && !f.asked.is_empty());
+    f.update(Msg::Escape);
+    assert!(f.confirm.is_none() && f.asked.is_empty() && !f.emptying);
     fs::remove_dir_all(&dir).unwrap();
 }

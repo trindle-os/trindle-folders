@@ -1,4 +1,4 @@
-// How big a wallpaper may be: Folders asks before it sends a picture to the wallpaper program, which holds to the same limits.
+//! How big a wallpaper may be: Folders asks before it sends a picture to the wallpaper program, which holds to the same limits.
 
 use crate::toolkit::t;
 use std::path::Path;

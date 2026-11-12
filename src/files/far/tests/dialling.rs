@@ -1,4 +1,4 @@
-// When a server is dialled, and where a held login goes.
+//! When a server is dialled, and where a held login goes.
 
 use std::fs;
 use std::sync::atomic::Ordering;
@@ -19,7 +19,7 @@ fn with_password() -> usize {
 
 fn card(f: &Files) -> (String, String) {
     match &f.dialog {
-        Some(Dialog::Connect(c)) => (view(c, 1).said().join(" "), c.password.clone()),
+        Some(Dialog::Connect(c)) => (view(c, 1).said().join(" "), c.password.to_string()),
         _ => panic!("no Connect card: {}", f.said),
     }
 }
@@ -35,7 +35,7 @@ fn an_address_with_a_password_waits_for_the_card_too(here: &Path, user: &str, p:
     let mut h = Files::new(vec![here.to_path_buf()]);
     h.update(Msg::Far(FarMsg::Open));
     h.update(Msg::Far(FarMsg::Address(format!("ftp://{user}@10.0.0.9"))));
-    h.update(Msg::Far(FarMsg::Password("secret".into())));
+    h.update(Msg::Far(FarMsg::Password(String::from("secret").into())));
     h.update(Msg::Far(FarMsg::Go));
     assert!(h.dialog.is_none(), "{}", h.said);
     let went = with_password();
@@ -55,7 +55,7 @@ fn a_password_waits_for_the_card_at_every_dialling_of_an_address_only_heard() {
     f.update(Msg::Add(Vec::new()));
     f.update(Msg::Far(FarMsg::Open));
     f.update(Msg::Far(FarMsg::Address(format!("ftp://{user}@nas.local"))));
-    f.update(Msg::Far(FarMsg::Password("secret".into())));
+    f.update(Msg::Far(FarMsg::Password(String::from("secret").into())));
     f.update(Msg::Far(FarMsg::Go));
     assert_eq!(with_password(), 0, "the password went to an address only heard, which no card had shown");
     let (said, _) = card(&f);
@@ -67,7 +67,7 @@ fn a_password_waits_for_the_card_at_every_dialling_of_an_address_only_heard() {
     assert_eq!(names(&f, p), ["box", "song.txt"]);
     let went = with_password();
     assert_eq!(went, 2);
-    assert!(DIALLED.with_borrow(|d| d.iter().all(|d| d.at.as_deref() == Some("10.0.0.7") && d.password.as_deref() == Some("secret"))), "{:?}", DIALLED.with_borrow(Clone::clone));
+    assert!(DIALLED.with_borrow(|d| d.iter().all(|d| d.at.as_deref() == Some("10.0.0.7") && d.password.as_ref().map(|p| p.as_str()) == Some("secret"))), "{:?}", DIALLED.with_borrow(Clone::clone));
     let a = Address::parse(&format!("ftp://{user}@nas.local/")).unwrap();
     assert!(f.far.links.with(&a, |r| r.list("/")).is_ok());
     assert_eq!(DIALLED.with_borrow(Vec::len), 2);
@@ -89,7 +89,7 @@ fn a_password_waits_for_the_card_at_every_dialling_of_an_address_only_heard() {
     f.update(Msg::Far(FarMsg::Go));
     assert!(f.dialog.is_none(), "{}", f.said);
     assert!(with_password() > went);
-    assert_eq!(DIALLED.with_borrow(|d| d.last().cloned()).unwrap().password.as_deref(), Some("secret"));
+    assert_eq!(DIALLED.with_borrow(|d| d.last().cloned()).unwrap().password.as_ref().map(|p| p.as_str()), Some("secret"));
     assert_eq!(names(&f, p), ["box", "song.txt"]);
     an_address_with_a_password_waits_for_the_card_too(&here, &user, p);
     let _ = (fs::remove_dir_all(here), fs::remove_dir_all(far));
@@ -130,7 +130,7 @@ fn a_server_that_gives_one_link_is_opened_and_worked_with_that_one() {
     crate::files::shares::pretend::dns("nas.local", "10.0.0.7");
     let a = Address::parse(&format!("ftp://{user}@nas.local/")).unwrap();
     let links = Links::default();
-    let login = Login { password: Some("secret".into()), ..Login::default() };
+    let login = Login { password: Some(String::from("secret").into()), ..Login::default() };
     let opened = links.open(&a, &login, Some(&Confirmed::made_up("10.0.0.7")));
     assert!(opened.is_ok(), "a server that gives one link was refused: {:?}", opened.err().map(|e| e.to_string()));
     let dialled = DIALLED.with_borrow(Vec::len);
@@ -150,7 +150,7 @@ fn a_held_password_goes_again_only_to_the_address_it_was_let_go_for() {
     dns("files.example.com", "10.0.0.7");
     let a = Address::parse(&format!("ftp://{user}@files.example.com/")).unwrap();
     let links = Links::default();
-    links.open(&a, &Login { password: Some("secret".into()), ..Login::default() }, None).unwrap();
+    links.open(&a, &Login { password: Some(String::from("secret").into()), ..Login::default() }, None).unwrap();
     let went = || DIALLED.with_borrow(|d| d.iter().filter(|d| d.password.is_some()).map(|d| d.at.clone().unwrap_or_default()).collect::<Vec<_>>());
     assert_eq!(went(), ["10.0.0.7"]);
     links.dropped();
@@ -169,7 +169,7 @@ fn a_held_password_goes_again_only_to_the_address_it_was_let_go_for() {
     assert_eq!(went().len(), 2, "the held password went to an address it was never let go for: {:?}", went());
     links.open(&a, &Login::default(), Some(&Confirmed::made_up("10.6.6.6"))).unwrap();
     assert_eq!(went().last().map(String::as_str), Some("10.6.6.6"));
-    assert_eq!(DIALLED.with_borrow(|d| d.last().cloned()).unwrap().password.as_deref(), Some("secret"));
+    assert_eq!(DIALLED.with_borrow(|d| d.last().cloned()).unwrap().password.as_ref().map(|p| p.as_str()), Some("secret"));
     let sent = went().len();
     links.dropped();
     assert!(links.look(&a, |r| r.list("/")).is_ok());

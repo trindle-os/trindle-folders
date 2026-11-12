@@ -1,4 +1,4 @@
-// Pictures for judging a look.
+//! Pictures for judging a look: the same few screens in each density, the
 
 use std::path::{Path, PathBuf};
 

@@ -1,4 +1,4 @@
-// Trindle Folders: the file manager, started as `trindle-folders`.
+//! Trindle Folders: the file manager, started as `trindle-folders`.
 
 #![allow(clippy::chunks_exact_to_as_chunks, clippy::manual_is_multiple_of)]
 

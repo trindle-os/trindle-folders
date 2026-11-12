@@ -1,4 +1,4 @@
-// A file's details beyond its name.
+//! A file's details beyond its name: dates, the read-only and runnable flags, EXIF notes in a photo, and ID3 tags in a song.
 
 use std::fs::{self, File, FileTimes, OpenOptions};
 use std::io::{self, Write};
@@ -13,7 +13,7 @@ mod song;
 #[cfg(test)]
 mod tests;
 
-pub use photo::{exif, write_exif, ExifEdit, Tag};
+pub use photo::{exif, exif_upright, write_exif, ExifEdit, Tag};
 pub use song::{read_id3, write_id3, Id3};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]

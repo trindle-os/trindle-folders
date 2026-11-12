@@ -1,4 +1,4 @@
-// The links open in a window: kept logins, the work links and the reading link of each server.
+//! The links open in a window: kept logins, the work links and the reading link of each server.
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -252,7 +252,7 @@ fn dial(a: &Address, to: &Leave<Login>) -> Result<Screened, Error> {
 pub(super) struct Dialled {
     pub(super) host: String,
     pub(super) at: Option<String>,
-    pub(super) password: Option<String>,
+    pub(super) password: Option<crate::files::remote::Secret>,
 }
 
 #[cfg(test)]

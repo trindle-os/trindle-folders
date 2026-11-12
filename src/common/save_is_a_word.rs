@@ -1,4 +1,4 @@
-// Save, Save as and Replace are words with no icon, everywhere.
+//! Save, Save as and Replace are words with no icon, everywhere. By reading the source: no button is named Save or Replace except one made with its word alone (`word_button`, `main_word`), apart from those in `ROUND`; and the icons for saving are named only on the lines in `ICONS`.
 
 use std::path::Path;
 

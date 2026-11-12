@@ -1,4 +1,4 @@
-// Pictures for the Folders page of the help site, each a failure drawn by the real view from the state the real code puts it in.
+//! Pictures for the Folders page of the help site, each a failure drawn by the
 
 use std::path::{Path, PathBuf};
 
@@ -114,7 +114,7 @@ fn page_shots_archives() {
     snap("archive-password-card", &f);
     f.dialog = None;
     f.unlock_ask(archive.clone(), Then::Unpack(Place::Here, dir.join("Papers")), Some(Trouble::WrongKey));
-    f.update(Msg::Unlock(UnlockMsg::Password("john-smith".into())));
+    f.update(Msg::Unlock(UnlockMsg::Password(String::from("john-smith").into())));
     snap("archive-password-wrong", &f);
     f.dialog = None;
 
@@ -122,7 +122,7 @@ fn page_shots_archives() {
     std::fs::write(&broken, b"not a zip").unwrap();
     f.go(0, Where::Inside(broken.clone(), String::new()));
     say(&mut f, "folders-locked-could-not-read",
-        t!("folders-locked-could-not-read", name = "broken.zip", why = "it is damaged or cut short"));
+        t!("folders-locked-could-not-read", name = "broken.zip", why = "it's damaged or incomplete"));
     snap("archive-not-opened", &f);
 
     let (dir2, mut f) = papers("archives-room");

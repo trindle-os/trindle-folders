@@ -1,4 +1,4 @@
-// For the tests that read Folders' own source: the files under `src`, by the names they have there, and the file work it shares from the toolkit, held to the same rules.
+//! For the tests that read Folders' own source: the files under `src`, by the names they have there, and the file work it shares from the toolkit, held to the same rules.
 
 pub use crate::toolkit::common::source::code;
 

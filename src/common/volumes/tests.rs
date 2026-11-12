@@ -1,4 +1,4 @@
-// Tests for the volume list and the steps on a volume.
+//! Tests for the volume list and the steps on a volume.
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -499,4 +499,11 @@ fn the_reader_alone_honours_the_file_of_hidden_drives_as_it_changes() {
     shows(&["Trindle", "Films", "HOLIDAY", "WORK"]);
     drop(watching);
     std::fs::remove_dir_all(&dir).unwrap();
+}
+
+#[test]
+fn only_an_unlock_is_told_its_passphrase_did_not_open_it() {
+    let refused = "GDBus.Error:org.freedesktop.UDisks2.Error.Failed: Error ejecting: Operation not permitted";
+    assert_ne!(words_of(refused, false), "That passphrase didn't unlock the drive.");
+    assert_eq!(words_of(refused, true), "That passphrase didn't unlock the drive.");
 }

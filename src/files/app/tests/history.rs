@@ -1,4 +1,4 @@
-// Back and Forward, linked panes, and keeping the chosen item in sight.
+//! Back and Forward, linked panes, and keeping the chosen item in sight.
 
 use super::*;
 

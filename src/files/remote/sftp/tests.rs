@@ -1,4 +1,4 @@
-// Tests of the SFTP link: its packets, its replies and a made-up server.
+//! Tests of the SFTP link: its packets, its replies and a made-up server.
 
 use super::*;
 use std::os::unix::net::UnixStream;
@@ -54,17 +54,20 @@ fn pieces_out_of_order_and_short() {
     let b = p.next().unwrap();
     let c = p.next().unwrap();
     assert_eq!((a.0, b.0, c.0), (0, CHUNK as u64, 2 * CHUNK as u64));
-    p.came(b.0, b.1, Some(vec![2; CHUNK as usize]));
-    p.came(c.0, c.1, None);
+    p.came(b.0, b.1, Some(vec![2; CHUNK as usize])).unwrap();
+    p.came(c.0, c.1, None).unwrap();
     assert!(p.ready().is_empty());
-    p.came(a.0, a.1, Some(vec![1; 100]));
+    p.came(a.0, a.1, Some(vec![1; 100])).unwrap();
     assert_eq!(p.ready().len(), 1);
     let again = p.next().unwrap();
     assert_eq!(again, (100, CHUNK - 100));
-    p.came(again.0, again.1, Some(vec![1; (CHUNK - 100) as usize]));
+    p.came(again.0, again.1, Some(vec![1; (CHUNK - 100) as usize])).unwrap();
     assert_eq!(p.ready().len(), 2);
     assert_eq!(p.written(), 2 * CHUNK as u64);
     assert_eq!(p.next(), None);
+    let mut p = Pieces::default();
+    let a = p.next().unwrap();
+    assert!(p.came(a.0, a.1, Some(vec![1; a.1 as usize + 1])).is_err());
 }
 
 #[test]
@@ -95,6 +98,7 @@ fn reasons() {
     assert!(matches!(r("No ED25519 host key is known for h and you have requested strict checking.\r\nHost key verification failed.\r\n"), Error::HostKeyUnknown(_)));
     assert!(matches!(r("@ WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED! @\nHost key verification failed.\n"), Error::HostKeyChanged(_)));
     assert!(matches!(r("ssh: Could not resolve hostname h: Name or service not known\n"), Error::Unreachable(_)));
+    assert_eq!(r("subsystem request failed on channel 0\r\n").to_string(), "This server doesn't offer SFTP.");
     assert!(why("", "h", &l).is_none());
 }
 
@@ -235,7 +239,17 @@ impl Folder {
 
     fn readdir(&mut self, id: u32, i: &mut In) -> Vec<u8> {
         let h = i.bytes().unwrap().to_vec();
-        match self.handles.get_mut(&h).unwrap().1.take() {
+        let held = self.handles.get_mut(&h).unwrap();
+        if held.1.as_ref().is_some_and(|l| l.iter().any(|(n, _)| n == "endless")) {
+            let list = held.1.clone().unwrap();
+            let mut o = Out::new(NAME, Some(id));
+            o.u32(list.len() as u32);
+            for (n, a) in &list {
+                o.str(n).str(n).attrs(a);
+            }
+            return o.done();
+        }
+        match held.1.take() {
             Some(list) => {
                 let mut o = Out::new(NAME, Some(id));
                 o.u32(list.len() as u32);
@@ -263,7 +277,7 @@ fn round_trip() {
     let data: Vec<u8> = (0..300_000u32).map(|i| (i % 251) as u8).collect();
     let mut seen = 0;
     let n = s
-        .write("/big.bin", &mut &data[..], data.len() as u64, &mut |d| {
+        .write_new("/big.bin", &mut &data[..], data.len() as u64, &mut |d| {
             seen = d;
             true
         })
@@ -274,6 +288,11 @@ fn round_trip() {
     let mut back = Vec::new();
     assert_eq!(s.read("/big.bin", &mut back, &mut |_| true).unwrap(), data.len() as u64);
     assert!(back == data);
+
+    std::fs::create_dir_all(root.join("loop")).unwrap();
+    std::fs::write(root.join("loop/endless"), b"").unwrap();
+    assert!(matches!(s.list("/loop"), Err(Error::Lost(_))));
+    std::fs::remove_dir_all(root.join("loop")).unwrap();
 
     assert!(s.refuses_taken());
     let got = s.write_new("/big.bin", &mut &b"other"[..], 5, &mut |_| true);

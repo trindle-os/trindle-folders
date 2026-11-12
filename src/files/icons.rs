@@ -1,4 +1,4 @@
-// The Icons view: big icons in a grid, one drawing a row, so a long folder never needs one canvas as tall as all of it.
+//! The Icons view: big icons in a grid, one drawing a row, so a long folder
 
 use crate::toolkit::colour::paint;
 use std::cell::Cell;

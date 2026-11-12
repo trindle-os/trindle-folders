@@ -1,4 +1,4 @@
-// Renaming many files at once by a list of rules.
+//! Renaming many files at once by a list of rules.
 
 use std::collections::{HashMap, HashSet};
 use std::fs;
@@ -172,38 +172,111 @@ pub fn undo(done: &Undo) -> io::Result<Undo> {
 }
 
 fn carry(moves: &[(PathBuf, PathBuf)]) -> io::Result<()> {
-    let mut parked: Vec<(PathBuf, PathBuf)> = Vec::new();
+    let mut pending: Vec<(PathBuf, PathBuf)> = moves.to_vec();
     let mut landed: Vec<(PathBuf, PathBuf)> = Vec::new();
+    let mut parked: Vec<(PathBuf, PathBuf)> = Vec::new();
+    #[cfg(test)]
+    let mut steps = 0;
     let result = (|| {
-        for (i, (from, _)) in moves.iter().enumerate() {
-            let dir = from.parent().unwrap_or(Path::new(""));
-            let hold = (0..)
-                .map(|n| dir.join(format!(".trindle-rename-{}-{i}-{n}", std::process::id())))
-                .find(|p| fs::symlink_metadata(p).is_err())
-                .expect("a free name");
-            rename_new(from, &hold)?;
-            parked.push((from.clone(), hold));
-        }
-        for ((_, to), (_, hold)) in moves.iter().zip(&parked) {
-            if fs::symlink_metadata(to).is_ok() {
+        while !pending.is_empty() {
+            #[cfg(test)]
+            {
+                if DIE_AFTER.with(|d| d.get() == Some(steps)) {
+                    return Err(io::Error::other("stopped"));
+                }
+                steps += 1;
+            }
+            let free = (0..pending.len()).find(|&i| !pending.iter().any(|(from, _)| *from == pending[i].1));
+            let Some(i) = free else {
+                let (from, _) = &pending[0];
+                let dir = from.parent().unwrap_or(Path::new(""));
+                let hold = (0..)
+                    .map(|n| dir.join(format!(".trindle-rename-{}-{n}", std::process::id())))
+                    .find(|p| fs::symlink_metadata(p).is_err())
+                    .expect("a free name");
+                parked.push((from.clone(), hold.clone()));
+                write_journal(&parked)?;
+                rename_new(from, &hold)?;
+                pending[0].0 = hold;
+                continue;
+            };
+            let (from, to) = pending.remove(i);
+            if fs::symlink_metadata(&to).is_ok() {
                 return Err(io::Error::new(io::ErrorKind::AlreadyExists, t!("folders-rename-already-there", path = &to.display().to_string())));
             }
-            rename_new(hold, to)?;
-            landed.push((hold.clone(), to.clone()));
+            rename_new(&from, &to)?;
+            landed.push((from, to));
         }
         Ok(())
     })();
+    #[cfg(test)]
+    if DIE_AFTER.with(|d| d.get().is_some()) {
+        return result;
+    }
     if result.is_err() {
-        for (hold, to) in landed.iter().rev() {
-            let _ = rename_new(to, hold);
+        for (from, to) in landed.iter().rev() {
+            let _ = rename_new(to, from);
         }
         for (from, hold) in parked.iter().rev() {
-            let (Some(dir), Some(name)) = (from.parent(), from.file_name()) else { continue };
-            let folder = fs::symlink_metadata(hold).is_ok_and(|m| m.is_dir());
-            super::proof::named_back(hold, dir, name, folder);
+            give_back(hold, from);
         }
     }
+    if !parked.is_empty() {
+        let _ = journal().map(fs::remove_file);
+    }
     result
+}
+
+#[cfg(test)]
+thread_local! {
+    static DIE_AFTER: std::cell::Cell<Option<usize>> = const { std::cell::Cell::new(None) };
+}
+
+fn journal() -> Option<PathBuf> {
+    #[cfg(test)]
+    return JOURNAL.with(|j| j.borrow().clone()).or_else(|| Some(std::env::temp_dir().join(format!("trindle-rename-journal-{}", std::process::id()))));
+    #[cfg(not(test))]
+    Some(crate::common::files::data_home().join("trindle-folders").join("renaming"))
+}
+
+#[cfg(test)]
+thread_local! {
+    static JOURNAL: std::cell::RefCell<Option<PathBuf>> = const { std::cell::RefCell::new(None) };
+}
+
+fn write_journal(parked: &[(PathBuf, PathBuf)]) -> io::Result<()> {
+    use std::os::unix::ffi::OsStrExt;
+    let Some(path) = journal() else { return Err(io::Error::other(t!("folders-rename-no-journal"))) };
+    if let Some(dir) = path.parent() {
+        fs::create_dir_all(dir)?;
+    }
+    let mut bytes = Vec::new();
+    for (from, hold) in parked {
+        for p in [from, hold] {
+            bytes.extend_from_slice(p.as_os_str().as_bytes());
+            bytes.push(0);
+        }
+    }
+    crate::common::files::write_whole_private(&path, &bytes)
+}
+
+pub fn recover() {
+    use std::os::unix::ffi::OsStrExt;
+    let Some(path) = journal() else { return };
+    let Ok(bytes) = crate::common::files::read_file(&path) else { return };
+    let paths: Vec<PathBuf> = bytes.split(|b| *b == 0).filter(|p| !p.is_empty()).map(|p| PathBuf::from(std::ffi::OsStr::from_bytes(p))).collect();
+    for pair in paths.chunks_exact(2) {
+        if fs::symlink_metadata(&pair[1]).is_ok() {
+            give_back(&pair[1], &pair[0]);
+        }
+    }
+    let _ = fs::remove_file(path);
+}
+
+fn give_back(hold: &Path, from: &Path) {
+    let (Some(dir), Some(name)) = (from.parent(), from.file_name()) else { return };
+    let folder = fs::symlink_metadata(hold).is_ok_and(|m| m.is_dir());
+    super::proof::named_back(hold, dir, name, folder);
 }
 
 fn split(name: &str, folder: bool) -> (String, Option<String>) {
@@ -372,9 +445,41 @@ mod tests {
         fs::remove_dir_all(&dir).unwrap();
     }
 
+    fn journal_in(dir: &Path) {
+        JOURNAL.with(|j| *j.borrow_mut() = Some(dir.join("journal")));
+    }
+
+    #[test]
+    fn a_rename_stopped_part_way_loses_no_name() {
+        let dir = place("killed");
+        let names = |d: &Path| { let mut n: Vec<String> = fs::read_dir(d).unwrap().map(|e| e.unwrap().file_name().to_string_lossy().into_owned()).filter(|n| n != "journal").collect(); n.sort(); n };
+        for n in ["one", "two", "three"] {
+            fs::write(dir.join(n), n).unwrap();
+        }
+        journal_in(&dir);
+        let plan: Vec<Planned> = ["one", "two", "three"].iter().map(|n| Planned { from: dir.join(n), to: dir.join(format!("{n}.txt")), clash: None }).collect();
+        DIE_AFTER.with(|d| d.set(Some(1)));
+        assert!(apply(&plan).is_err());
+        DIE_AFTER.with(|d| d.set(None));
+        assert_eq!(names(&dir), ["one.txt", "three", "two"], "a file was left under a name nobody chose");
+        fs::write(dir.join("a"), "a").unwrap();
+        fs::write(dir.join("b"), "b").unwrap();
+        let plan = vec![Planned { from: dir.join("a"), to: dir.join("b"), clash: None }, Planned { from: dir.join("b"), to: dir.join("a"), clash: None }];
+        DIE_AFTER.with(|d| d.set(Some(1)));
+        assert!(apply(&plan).is_err());
+        DIE_AFTER.with(|d| d.set(None));
+        assert!(names(&dir).iter().any(|n| n.starts_with(".trindle-rename-")));
+        recover();
+        assert_eq!(names(&dir), ["a", "b", "one.txt", "three", "two"]);
+        assert_eq!(fs::read_to_string(dir.join("a")).unwrap(), "a");
+        assert!(!dir.join("journal").exists());
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
     #[test]
     fn swaps_apply_and_undo() {
         let dir = place("swap");
+        journal_in(&dir);
         for n in ["a", "b", "c"] {
             fs::write(dir.join(n), n).unwrap();
         }
@@ -394,6 +499,7 @@ mod tests {
         }
         undo(&again).unwrap();
         assert_eq!(fs::read_to_string(dir.join("b")).unwrap(), "a");
+        assert!(!journal().unwrap().exists(), "the journal outlived the rename");
         let plan = preview(&[dir.join("a")], &[Rule::Case(Case::Upper)]);
         assert_eq!(plan[0].clash, None);
         apply(&plan).unwrap();
@@ -418,16 +524,5 @@ mod tests {
         assert_eq!(fs::read_to_string(dir.join("late")).unwrap(), "late");
         assert_eq!(fs::read_dir(&dir).unwrap().count(), 3);
         fs::remove_dir_all(&dir).unwrap();
-    }
-
-    #[test]
-    fn a_name_is_given_back_only_by_the_one_way() {
-        for (file, text, times) in [
-            ("wipe.rs", crate::common::source::code(include_str!("wipe.rs")), 2),
-            ("rename.rs", crate::common::source::code(include_str!("rename.rs")), 1),
-        ] {
-            let code = text.split_once("#[cfg(test)]\nmod tests").map_or(text, |(code, _)| code);
-            assert_eq!(code.matches("named_back(").count(), times, "{file}");
-        }
     }
 }

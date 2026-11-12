@@ -1,4 +1,4 @@
-// What a pane shows: the places, what is in them and in which order, and the folders the person pinned.
+//! What a pane shows: the places, what is in them and in which order, and
 
 use std::cmp::Ordering;
 use std::ffi::OsString;
@@ -13,7 +13,31 @@ use crate::toolkit::t;
 
 const RECENT: usize = 100;
 const CRUMBS: usize = 4;
-const NETWORK: &[&str] = &["nfs", "nfs4", "cifs", "smb3", "smbfs", "fuse.sshfs", "sshfs", "davfs", "fuse.rclone", "afpfs", "9p"];
+const NETWORK: &[&str] = &["nfs", "nfs4", "cifs", "smb3", "smbfs", "sshfs", "davfs", "rclone", "afpfs", "9p", "ceph", "glusterfs", "afs"];
+
+pub(in crate::files) fn on_another_computer(kind: &str) -> bool {
+    NETWORK.contains(&kind.trim_start_matches("fuse."))
+}
+
+pub(in crate::files) fn unescape(s: &str) -> String {
+    let b = s.as_bytes();
+    let mut out = Vec::with_capacity(b.len());
+    let mut i = 0;
+    while i < b.len() {
+        let octal = b.get(i + 1..i + 4).filter(|d| d.iter().all(|c| (b'0'..=b'7').contains(c)));
+        match (b[i], octal) {
+            (b'\\', Some(d)) => {
+                out.push((d[0] - b'0') * 64 + (d[1] - b'0') * 8 + (d[2] - b'0'));
+                i += 4;
+            }
+            (c, _) => {
+                out.push(c);
+                i += 1;
+            }
+        }
+    }
+    String::from_utf8_lossy(&out).into_owned()
+}
 
 pub fn root_name() -> &'static str {
     t!("folders-places-root-name")
@@ -281,7 +305,7 @@ pub fn network(mounts: &str) -> Vec<PathBuf> {
         let mut bits = line.split(' ');
         let at = bits.nth(1)?;
         let kind = bits.next()?;
-        NETWORK.contains(&kind).then(|| super::trash::mount_point(at))
+        on_another_computer(kind).then(|| super::trash::mount_point(at))
     }).collect()
 }
 
@@ -441,6 +465,17 @@ mod tests {
     use super::*;
 
     #[test]
+    fn one_list_says_what_is_another_computers() {
+        for kind in ["nfs", "nfs4", "cifs", "smb3", "smbfs", "sshfs", "fuse.sshfs", "fuse.rclone", "davfs", "afpfs", "9p", "ceph", "glusterfs", "afs"] {
+            assert!(on_another_computer(kind), "{kind}");
+        }
+        for kind in ["ext4", "btrfs", "vfat", "fuse.portal", "tmpfs"] {
+            assert!(!on_another_computer(kind), "{kind}");
+        }
+        assert_eq!(unescape(r"a\011b\012c\134d"), "a\tb\nc\\d");
+    }
+
+    #[test]
     fn the_names_of_places_follow_the_language_and_fall_back_word_by_word() {
         use crate::toolkit::lang::{english, with_catalogue, Bundle, Catalogue};
         let french = "folders-places-root-name = Disque du système\nfolders-places-page-name = Stockage\n";
@@ -571,6 +606,9 @@ mod tests {
         assert_eq!(recent(&three), [a.to_path_buf(), b.to_path_buf()]);
         assert_eq!(three.matches("<bookmark href").count(), 2);
         assert!(three.contains("added=\"2026-10-04T09:00:00Z\""));
+        assert!(!two.contains("b&c") && two.contains("b%26c"), "{two}");
+        let four = add_recent(&three, b, "image/png", "2026-10-04T12:00:00Z");
+        assert_eq!(four.matches("<bookmark href").count(), 2, "an entry with & was added again");
     }
 
     fn names(e: &[Entry]) -> Vec<&str> {

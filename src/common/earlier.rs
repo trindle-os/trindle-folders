@@ -1,5 +1,6 @@
-// Earlier versions of a file or folder, read from the snapshots of the home folder (common/home_snapshots.rs), for Folders to offer.
+//! Earlier versions of a file or folder, read from the snapshots of the home
 
+use crate::toolkit::t;
 use std::fs::Metadata;
 use std::io::Read;
 use std::os::unix::fs::{MetadataExt, OpenOptionsExt, PermissionsExt};
@@ -190,37 +191,40 @@ impl Store {
 
     pub fn put_back(&self, version: &Version, to: &Path) -> Result<PutBack, String> {
         if !version.path.starts_with(&self.snapshots) || version.path.components().any(|c| matches!(c, Component::ParentDir)) {
-            return Err("That is not an earlier version.".into());
+            return Err(t!("folders-earlier-put-back-not-version").into());
         }
         if self.place(to).is_none() {
-            return Err("An earlier version can only be put back inside the home folder.".into());
+            return Err(t!("folders-earlier-put-back-home-only").into());
         }
         let (Some(parent), Some(name)) = (to.parent(), to.file_name().and_then(|n| n.to_str())) else {
-            return Err("That is not a place a file can go.".into());
+            return Err(t!("folders-earlier-put-back-no-place").into());
         };
-        std::fs::create_dir_all(parent).map_err(|e| format!("The folder it was in could not be made again: {e}"))?;
-        let coming = parent.join(format!(".{name}.putting-back-{}", std::process::id()));
-        remove(&coming);
+        std::fs::create_dir_all(parent).map_err(|e| t!("folders-earlier-put-back-folder-lost", why = e.to_string()))?;
+        let coming = (0u32..).map(|n| parent.join(format!(".{name}.putting-back-{}-{n}", std::process::id())))
+            .find(|p| std::fs::symlink_metadata(p).is_err()).expect("a free name");
         if let Err(e) = copy(&version.path, &coming) {
             remove(&coming);
-            return Err(format!("The earlier version could not be copied: {e}"));
+            return Err(t!("folders-earlier-put-back-copy-failed", why = e.to_string()));
         }
         let kept = if std::fs::symlink_metadata(to).is_ok() {
             let aside = free_name(parent, name);
             if let Err(e) = crate::common::files::rename_new(to, &aside) {
                 remove(&coming);
-                return Err(format!("What is there now could not be set aside: {e}"));
+                return Err(t!("folders-earlier-put-back-aside-failed", why = e.to_string()));
             }
             Some(aside)
         } else {
             None
         };
         if let Err(e) = crate::common::files::rename_new(&coming, to) {
-            if let Some(aside) = &kept {
-                let _ = crate::common::files::rename_new(aside, to);
-            }
             remove(&coming);
-            return Err(format!("The earlier version could not be put in place: {e}"));
+            if let Some(aside) = &kept {
+                if crate::common::files::rename_new(aside, to).is_err() {
+                    let at = aside.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+                    return Err(t!("folders-earlier-put-back-in-place-named", why = e.to_string(), name = &at));
+                }
+            }
+            return Err(t!("folders-earlier-put-back-in-place", why = e.to_string()));
         }
         Ok(PutBack { put: to.to_path_buf(), kept })
     }
@@ -511,6 +515,12 @@ mod tests {
         let names: Vec<String> = std::fs::read_dir(w.live("john")).unwrap().flatten()
             .map(|e| e.file_name().to_string_lossy().into_owned()).collect();
         assert!(names.iter().all(|n| !n.contains("putting-back")), "{names:?}");
+        let theirs = w.live(&format!("john/.report.odt.putting-back-{}", std::process::id()));
+        std::fs::create_dir_all(theirs.join("inside")).unwrap();
+        std::fs::write(theirs.join("inside/keep.txt"), "theirs").unwrap();
+        write(&w.live("john/report.odt"), "spoilt a third time", 5000);
+        w.store.put_back(&v, &w.live("john/report.odt")).unwrap();
+        assert_eq!(std::fs::read_to_string(theirs.join("inside/keep.txt")).unwrap(), "theirs", "a folder the putting back never made was removed");
     }
 
     #[test]

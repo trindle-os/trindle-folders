@@ -1,4 +1,4 @@
-// What the two panes do together, from the strip between them.
+//! What the two panes do together, from the strip between them: showing
 
 use crate::toolkit::t;
 
@@ -111,9 +111,9 @@ mod tests {
         assert!(differing(&there, &there).is_empty());
         assert_eq!(differing(&here, &[]).len(), here.len());
         assert!(differing_words(0).starts_with("Nothing here differs"));
-        assert!(differing_words(1).starts_with("1 thing here is not") && differing_words(4).starts_with("4 things here are not"));
+        assert!(differing_words(1).starts_with("1 thing here is missing from the other pane") && differing_words(4).starts_with("4 things here are missing from the other pane"));
         for n in [0, 1, 4] {
-            assert!(differing_words(n).ends_with("Folders are matched by name only."));
+            assert!(differing_words(n).ends_with("Subfolders are only compared by name."));
         }
     }
 
@@ -148,7 +148,7 @@ mod tests {
         let names = |f: &Files, p: usize| f.cols[p].picked.iter().map(|i| f.cols[p].entries[*i].name.clone()).collect::<Vec<_>>();
         assert_eq!(names(&f, 0), ["apple.txt", "pear.txt"]);
         assert!(f.cols[1].picked.is_empty());
-        assert!(f.said.starts_with("2 things here are not in the other pane"), "{}", f.said);
+        assert!(f.said.starts_with("2 things here are missing from the other pane"), "{}", f.said);
         f.update(Msg::OtherPane);
         f.update(Msg::PickDiffering);
         assert_eq!(names(&f, 1), ["pear.txt"]);

@@ -1,4 +1,4 @@
-// Work under way, shown in the Folders window itself.
+//! Work under way, shown in the Folders window itself.
 
 use super::act::{Asking, Job};
 use super::icons::{self, stand_in};
@@ -421,7 +421,7 @@ mod tests {
         j.from = vec![std::path::PathBuf::from("/a")];
         assert_eq!(heavy_by(&j, j.began), None, "small and quick");
         let said = heavy_by(&j, j.began + after).unwrap();
-        assert!(said.starts_with("Copying uses the disk heavily"), "{said}");
+        assert!(said.starts_with("Copying keeps the disk busy"), "{said}");
         j.total = (mb as u64 + 1) * 1_000_000;
         assert!(heavy_by(&j, j.began).is_some(), "big at once");
         j.words.doing = "Moving a to b".into();
@@ -491,7 +491,7 @@ mod tests {
     #[test]
     fn newer_and_larger_are_said_of_whichever_is() {
         let e = |size, when, folder| Entry { name: "report.txt".into(), path: "/tmp/report.txt".into(), folder, size, when, kind: None };
-        assert_eq!(marks(&e(10, 200, false), &e(5, 100, false)), ("newer, larger".to_string(), String::new()));
+        assert_eq!(marks(&e(10, 200, false), &e(5, 100, false)), ("newer and larger".to_string(), String::new()));
         assert_eq!(marks(&e(5, 200, false), &e(10, 100, false)), ("newer".to_string(), "larger".to_string()));
         assert_eq!(marks(&e(5, 100, false), &e(5, 100, false)), (String::new(), String::new()));
         assert_eq!(marks(&e(0, 100, true), &e(0, 300, true)), (String::new(), "newer".to_string()));
@@ -617,7 +617,7 @@ mod tests {
         f.jobs.push(job);
         f.update(Msg::Work(9, crate::files::work::News::Over(crate::files::work::Over { stopped: true, ..Default::default() })));
         let e = f.ended.last().unwrap().clone();
-        assert!(e.stays && e.words == "Stopped part way.", "{e:?}");
+        assert!(e.stays && e.words == "The job was stopped before it finished.", "{e:?}");
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -783,6 +783,6 @@ mod tests {
         }
         let rows = rows(&f, 0);
         assert_eq!(rows.len(), fit);
-        assert_eq!(rows[0].said(), ["4 more pieces of work are under way"]);
+        assert_eq!(rows[0].said(), ["4 more jobs are running"]);
     }
 }

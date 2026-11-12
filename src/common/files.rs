@@ -1,4 +1,4 @@
-// The person's folders and files as the toolkit gives them, with Trindle's `trindle.conf` read when it is there.
+//! The person's folders and files as the toolkit gives them, with Trindle's `trindle.conf` read when it is there.
 
 pub use trindle_toolkit::common::files::*;
 

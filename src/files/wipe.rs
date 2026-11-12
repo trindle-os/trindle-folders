@@ -1,4 +1,4 @@
-// Wiping files: each file is written over with random bytes, cut to nothing, renamed and then removed.
+//! Wiping files: each is written over with random bytes, cut to nothing, renamed and removed; a link is removed as a link and what it points to is never touched.
 
 use std::fs::{self, File, Metadata, OpenOptions};
 use std::io::{self, Seek, SeekFrom, Write};
@@ -38,7 +38,7 @@ pub fn caveats(place: &Path) -> Vec<Caveat> {
         let base = kind.trim_start_matches("fuse.");
         if ["btrfs", "zfs", "bcachefs", "f2fs", "nilfs2"].contains(&base) {
             out.push(Caveat::CopyOnWrite(kind.clone()));
-        } else if ["nfs", "nfs4", "cifs", "smb3", "smbfs", "sshfs", "9p", "ceph", "glusterfs", "davfs", "afs"].contains(&base) {
+        } else if super::places::on_another_computer(&kind) {
             out.push(Caveat::Network(kind.clone()));
         }
     }
@@ -58,7 +58,8 @@ pub fn wipe_asked(asked: &[super::proof::Asked], paths: &[PathBuf], passes: u32,
     let passes = passes.max(1) as u64;
     let meter = Meter::new(stop, tell);
     let mut wiped = Wiped::default();
-    let mut todo: Vec<(File, PathBuf, std::ffi::OsString, Which)> = Vec::new();
+    let mut todo: Vec<(std::rc::Rc<File>, PathBuf, std::ffi::OsString, Which)> = Vec::new();
+    let mut opened: std::collections::HashMap<PathBuf, std::rc::Rc<File>> = std::collections::HashMap::new();
     for p in paths {
         let was = asked.iter().find(|a| a.path() == p).map(|a| a.which());
         let (Some(up), Some(name)) = (p.parent(), p.file_name()) else {
@@ -66,10 +67,19 @@ pub fn wipe_asked(asked: &[super::proof::Asked], paths: &[PathBuf], passes: u32,
             continue;
         };
         match fs::symlink_metadata(p) {
-            Ok(m) if was == Some(Which::of(&m)) => match OpenOptions::new().read(true).custom_flags(libc::O_PATH | libc::O_DIRECTORY).open(up) {
-                Ok(dir) => todo.push((dir, up.to_path_buf(), name.to_os_string(), Which::of(&m))),
-                Err(e) => wiped.refused.push((p.clone(), Refused::Failed(e.kind()))),
-            },
+            Ok(m) if was == Some(Which::of(&m)) => {
+                let dir = match opened.get(up) {
+                    Some(d) => Ok(d.clone()),
+                    None => OpenOptions::new().read(true).custom_flags(libc::O_PATH | libc::O_DIRECTORY).open(up).map(std::rc::Rc::new),
+                };
+                match dir {
+                    Ok(dir) => {
+                        opened.insert(up.to_path_buf(), dir.clone());
+                        todo.push((dir, up.to_path_buf(), name.to_os_string(), Which::of(&m)));
+                    }
+                    Err(e) => wiped.refused.push((p.clone(), Refused::Failed(e.kind()))),
+                }
+            }
             Ok(_) => wiped.refused.push((p.clone(), Refused::Changed)),
             Err(e) => wiped.refused.push((p.clone(), Refused::Failed(e.kind()))),
         }
@@ -203,7 +213,7 @@ fn over(path: &Path, meta: &Metadata, passes: u64, meter: &Meter) -> io::Result<
     if !same(&file) {
         return Ok(false);
     }
-    let len = meta.len();
+    let len = file.metadata()?.len();
     let mut noise = Noise::new();
     let mut buf = vec![0u8; len.clamp(1, 1 << 20) as usize];
     let mut out = Counted::new(&file, meter);
@@ -312,32 +322,12 @@ fn fs_kind(path: &Path) -> Option<String> {
         let fields: Vec<&str> = line.split(' ').collect();
         let Some(dash) = fields.iter().position(|f| *f == "-") else { continue };
         let (Some(point), Some(kind)) = (fields.get(4), fields.get(dash + 1)) else { continue };
-        let point = unescape(point);
+        let point = super::places::unescape(point);
         if path.starts_with(&point) && best.as_ref().is_none_or(|(n, _)| point.len() >= *n) {
             best = Some((point.len(), kind.to_string()));
         }
     }
     best.map(|(_, k)| k)
-}
-
-fn unescape(s: &str) -> String {
-    let b = s.as_bytes();
-    let mut out = Vec::with_capacity(b.len());
-    let mut i = 0;
-    while i < b.len() {
-        let octal = b.get(i + 1..i + 4).filter(|d| d.iter().all(|c| (b'0'..=b'7').contains(c)));
-        match (b[i], octal) {
-            (b'\\', Some(d)) => {
-                out.push((d[0] - b'0') * 64 + (d[1] - b'0') * 8 + (d[2] - b'0'));
-                i += 4;
-            }
-            (c, _) => {
-                out.push(c);
-                i += 1;
-            }
-        }
-    }
-    String::from_utf8_lossy(&out).into_owned()
 }
 
 #[cfg(test)]
@@ -472,6 +462,12 @@ mod tests {
         meter.total(secret.len() as u64 * 3);
         assert!(over(&p, &meta, 3, &meter).unwrap());
         assert_eq!(meter.done(), secret.len() as u64 * 3);
+        fs::write(&p, b"short").unwrap();
+        let listed = fs::symlink_metadata(&p).unwrap();
+        fs::OpenOptions::new().append(true).open(&p).unwrap().write_all(&[7u8; 5000]).unwrap();
+        let grew = Meter::new(&stop, &|_, _| {});
+        assert!(over(&p, &listed, 1, &grew).unwrap());
+        assert_eq!(grew.done(), 5005, "the tail added since the listing was not written over");
         assert_eq!(fs::metadata(&p).unwrap().len(), 0);
         let mut noise = vec![0u8; 4096];
         Noise::new().fill(&mut noise);
@@ -487,8 +483,8 @@ mod tests {
 
     #[test]
     fn caveats_read_the_mounts() {
-        assert_eq!(unescape(r"/media/John\040Smith"), "/media/John Smith");
-        assert_eq!(unescape(r"/a\\b"), r"/a\\b");
+        assert_eq!(super::super::places::unescape(r"/media/John\040Smith"), "/media/John Smith");
+        assert_eq!(super::super::places::unescape(r"/a\\b"), r"/a\\b");
         assert!(fs_kind(Path::new("/proc/self")).is_some_and(|k| k == "proc"));
         let _ = caveats(&std::env::temp_dir());
     }

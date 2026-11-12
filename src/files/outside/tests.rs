@@ -1,4 +1,4 @@
-// Tests of files dragged between Folders and other programs.
+//! Tests of files dragged between Folders and other programs.
 
 use crate::common::info_popup_tests::{shuts_like_every_other, Program};
 
@@ -85,7 +85,7 @@ fn a_move_another_program_asks_for_is_a_copy_and_only_shift_moves() {
     f.update(Msg::Undo);
     assert!(dir.join("there/notes.txt").exists() && !dir.join("here/notes.txt").exists());
     assert_eq!(drop_on_pane(&mut f, vec![dir.join("here/report.txt")], Way::Move), DropEnd::Failed);
-    assert_eq!(f.said, "They are in that folder already.");
+    assert_eq!(f.said, "They're already in that folder.");
     let _ = std::fs::remove_dir_all(&dir);
 }
 
@@ -103,7 +103,7 @@ fn what_cannot_be_trusted_or_used_is_refused_in_plain_words() {
         assert!(f.bad && !dir.join("here/notes.txt").exists(), "{bad:?}");
     }
     assert_eq!(drop_on_pane(&mut f, vec![dir.join("here")], Way::Copy), DropEnd::Failed);
-    assert_eq!(f.said, "A folder cannot be put inside itself.");
+    assert_eq!(f.said, "You can't put a folder inside itself.");
     assert_eq!(drop_on_pane(&mut f, vec![dir.clone()], Way::Copy), DropEnd::Failed);
     f.go(0, Where::Trash);
     assert_eq!(drop_on_pane(&mut f, vec![dir.join("there/notes.txt")], Way::Copy), DropEnd::Failed);
@@ -136,14 +136,14 @@ fn what_another_program_names_from_a_private_place_is_asked_about_first() {
     assert!(!dir.join("here/id_made_up").exists() && f.jobs.is_empty());
     let said = card_of(&f);
     assert!(said.iter().any(|s| s == "Copy id_made_up here?"), "{said:?}");
-    assert!(said.iter().any(|s| s.starts_with("Another program dropped it on Folders and named it itself.") && s.ends_with("nothing is copied until you say.")), "{said:?}");
+    assert!(said.iter().any(|s| s.starts_with("Another program dropped this on Folders.") && s.ends_with("until you say so.")), "{said:?}");
     assert!(said.iter().any(|s| s == "id_made_up, from ~/.ssh: hidden, or in a hidden folder"), "{said:?}");
     assert!(said.iter().any(|s| s == "Into here."), "{said:?}");
     let buttons: Vec<&String> = said.iter().filter(|s| s.starts_with("button: ")).collect();
     assert_eq!(buttons, ["button: Leave it", "button: Copy it", "button: Leave it"], "{said:?}");
     f.update(Msg::Ask(crate::files::dialogs::AskMsg::Close));
     assert!(f.dialog.is_none() && !dir.join("here/id_made_up").exists());
-    assert_eq!((f.said.as_str(), f.bad), ("Nothing was brought.", false));
+    assert_eq!((f.said.as_str(), f.bad), ("Nothing was copied or moved.", false));
     assert_eq!(*log.borrow(), [(7, false)]);
     assert_eq!(drop_on_pane(&mut f, vec![dir.join(".ssh/id_made_up")], Way::Copy), DropEnd::Later);
     f.update(Msg::OutsideAnswer(true));
@@ -161,13 +161,13 @@ fn what_another_program_names_from_a_private_place_is_asked_about_first() {
     std::fs::create_dir_all(dir.join("there/project/src")).unwrap();
     std::fs::write(dir.join("there/project/src/.env"), "MADE_UP=1").unwrap();
     assert_eq!(drop_on_pane(&mut f, vec![dir.join("there/project")], Way::Copy), DropEnd::Later);
-    assert!(card_of(&f).iter().any(|s| s == "project, from ~/there: has hidden things in it"), "{:?}", card_of(&f));
+    assert!(card_of(&f).iter().any(|s| s == "project, from ~/there: has hidden items in it"), "{:?}", card_of(&f));
     f.update(Msg::OutsideAnswer(false));
     std::os::unix::fs::symlink(dir.join(".ssh"), dir.join("there/keys")).unwrap();
     assert_eq!(drop_on_pane(&mut f, vec![dir.join("there/keys/id_made_up")], Way::Copy), DropEnd::Later);
     assert!(card_of(&f).iter().any(|s| s.ends_with("hidden, or in a hidden folder")), "{:?}", card_of(&f));
     assert_eq!(drop_on_pane(&mut f, vec![dir.join("there/report.txt")], Way::Copy), DropEnd::Failed);
-    assert_eq!(f.said, "Answer the question about what was dropped first.");
+    assert_eq!(f.said, "Answer the question about what you dropped first.");
     assert!(!dir.join("here/report.txt").exists());
     f.update(Msg::OutsideAnswer(false));
     let before = log.borrow().len();
@@ -296,10 +296,10 @@ fn a_folder_is_not_put_inside_itself_by_another_name() {
     let mut f = files_in(&dir);
     f.go(0, Where::Folder(dir.join("here/way")));
     assert_eq!(drop_on_pane(&mut f, vec![dir.join("there")], Way::Copy), DropEnd::Failed);
-    assert_eq!((f.said.as_str(), f.bad), ("A folder cannot be put inside itself.", true));
+    assert_eq!((f.said.as_str(), f.bad), ("You can't put a folder inside itself.", true));
     assert!(!dir.join("there/there").exists() && f.jobs.is_empty());
     assert_eq!(drop_on_pane(&mut f, vec![dir.clone()], Way::Copy), DropEnd::Failed);
-    assert_eq!(f.said, "A folder cannot be put inside itself.");
+    assert_eq!(f.said, "You can't put a folder inside itself.");
     let _ = std::fs::remove_dir_all(&dir);
 }
 
@@ -318,7 +318,7 @@ fn they_land_in_a_folder_under_the_pointer_a_pinned_folder_or_a_tab() {
     let trash = f.place_list().iter().position(|w| *w == Where::Trash).unwrap();
     f.update(Msg::Outside(Onto::Land(Land::Place(trash)), Given::Files(vec![dir.join("there/notes.txt")]), Way::Copy));
     assert!(dir.join("there/notes.txt").exists());
-    assert_eq!(f.said, "Things can only be dropped on a folder.");
+    assert_eq!(f.said, "You can only drop things on a folder.");
     let _ = std::fs::remove_dir_all(&dir);
 }
 
@@ -445,10 +445,10 @@ fn what_is_put_in_its_place_while_the_card_is_up_is_not_brought() {
     held(&mut h);
     h.update(Msg::OutShort(Way::Move));
     assert!(h.drag.is_none() && dir.join("there/notes.txt").exists());
-    assert_eq!((h.said.as_str(), h.bad), ("The other program did not take all of what was dragged, so nothing here was moved.", true));
+    assert_eq!((h.said.as_str(), h.bad), ("The other program didn't take everything you dragged, so Folders didn't move anything.", true));
     held(&mut h);
     h.update(Msg::OutShort(Way::Copy));
-    assert_eq!((h.said.as_str(), h.bad), ("The other program did not take all of what was dragged, so it may not have all of it.", true));
+    assert_eq!((h.said.as_str(), h.bad), ("The other program didn't take everything you dragged, so its copy may not be complete.", true));
     let _ = std::fs::remove_dir_all(&dir);
 }
 
@@ -477,7 +477,7 @@ fn what_took_a_dragged_things_name_before_the_move_finished_is_not_put_in_the_tr
     f.drag = Some(held_out(vec![notes.clone()]));
     f.update(Msg::OutUnshown(Way::Move));
     assert!(f.drag.is_none() && notes.exists());
-    assert_eq!((f.said.as_str(), f.bad), ("The other program took what was dragged in a way that cannot show it read all of it, so nothing here was moved: what it has is a copy.", true));
+    assert_eq!((f.said.as_str(), f.bad), ("Folders can't tell whether the other program got everything you dragged, so it left the originals here. The other program has a copy.", true));
     f.say("", false);
     f.drag = Some(held_out(vec![notes.clone()]));
     f.update(Msg::OutUnshown(Way::Copy));
@@ -592,7 +592,7 @@ fn a_hidden_thing_put_in_a_folder_after_it_was_looked_at_is_not_brought() {
     std::fs::write(proj.join(".git/config"), "made up").unwrap();
     std::fs::write(proj.join("readme.txt"), "read me").unwrap();
     assert_eq!(drop_on_pane(&mut f, vec![proj.clone()], Way::Copy), DropEnd::Later);
-    assert!(card_of(&f).iter().any(|s| s == "proj, from ~/there: has hidden things in it"), "{:?}", card_of(&f));
+    assert!(card_of(&f).iter().any(|s| s == "proj, from ~/there: has hidden items in it"), "{:?}", card_of(&f));
     std::fs::write(proj.join(".env"), "a made-up secret").unwrap();
     std::fs::write(proj.join(".git/hooks/.also"), "another").unwrap();
     std::os::unix::fs::symlink(dir.join(".ssh"), proj.join("way")).unwrap();
@@ -654,13 +654,13 @@ fn a_place_that_does_not_answer_is_given_up_on() {
     waiting(&mut f, 9);
     assert_eq!(f.drop_end(7, Way::Copy), DropEnd::Later);
     f.update(Msg::Outside(Onto::Icons(0, 0, 500.0, 300.0), Given::Files(vec![dir.join("there/notes.txt")]), Way::Copy));
-    assert_eq!(f.said, "The last thing dropped is still being looked at.");
+    assert_eq!(f.said, "Folders is still checking the last thing you dropped.");
     f.update(Msg::Changed);
     assert!(log.borrow().is_empty(), "not told anything while it is looked at");
     f.update(Msg::OutsideLate(8));
     assert!(f.outside.looking.is_some() && log.borrow().is_empty());
     f.update(Msg::OutsideLate(9));
-    assert_eq!((f.said.as_str(), f.bad), ("The place report.txt is in is not answering, so nothing was brought.", true));
+    assert_eq!((f.said.as_str(), f.bad), ("Folders couldn't reach the drive that report.txt is on in time, so nothing was copied or moved.", true));
     assert_eq!(*log.borrow(), [(7, false)]);
     f.update(Msg::OutsideLooked(9, Box::new(look(&files, Some(&dir.join("here")), &dir, false))));
     assert!(!dir.join("here/report.txt").exists() && f.jobs.is_empty());

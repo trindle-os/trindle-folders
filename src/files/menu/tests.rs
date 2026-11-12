@@ -1,5 +1,4 @@
-// Tests of the menu: its rows for each place and pick, its sub-menus, and its keys and pointer.
-
+//! Tests of the menu: its rows for each place and pick, its sub-menus, and
 use std::path::{Path, PathBuf};
 
 use super::fold::{fold, FOR_GOOD, WHOLE};
@@ -207,7 +206,7 @@ fn pinning_is_kept_said_and_undone(r: &mut Ringed, ring: &Path) {
     use crate::common::favourites;
     let dir = r.dir.clone();
     r.ring_pin("Photos");
-    assert_eq!(r.f.said, "Pinned Photos to the ring. It shows with the favourite apps.");
+    assert_eq!(r.f.said, "Pinned Photos to the ring, next to your favourite apps.");
     r.ring_pin("letter.odt");
     let ids = favourites::read(ring);
     assert_eq!(ids[ids.len() - 2..], [dir.join("Photos").to_string_lossy().into_owned(), dir.join("letter.odt").to_string_lossy().into_owned()]);
@@ -216,7 +215,7 @@ fn pinning_is_kept_said_and_undone(r: &mut Ringed, ring: &Path) {
     assert_eq!(ring_row(&r.side()), Some("Unpin from the ring"));
     assert_eq!(ring_row(&r.rows(&["notes.txt"])), Some("Pin to the ring"));
     r.ring_pin("Photos");
-    assert_eq!(r.f.said, "Took Photos off the ring.");
+    assert_eq!(r.f.said, "Unpinned Photos from the ring.");
     assert!(!favourites::has(ring, &dir.join("Photos")) && favourites::has(ring, &dir.join("letter.odt")));
     let full: Vec<String> = (0..favourites::MAX).map(|n| format!("app{n}.desktop")).collect();
     favourites::write(ring, &full).unwrap();
@@ -412,11 +411,11 @@ fn the_named_cases_stand() {
     };
     let home = Where::Folder(PathBuf::from("/home/john/Documents"));
     assert_eq!(level(&home, &[Sel::default()]),
-               ["New folder", "New document", "Open", "Open with another app", "Cut", "Copy", "Copy location", "Rename", "Pack, send and share", "Tools", "Move to Trash", "Delete permanently", "Properties"]);
+               ["New folder", "New document", "Open", "Open with another app", "Cut", "Copy", "Copy location", "Rename", "Compress, send and share", "Tools", "Move to Trash", "Delete permanently", "Properties"]);
     assert_eq!(level(&home, &[]), ["New folder", "New document", "Paste", "Select", "Tools", "Properties"]);
-    assert_eq!(level(&home, &[Sel { archive: true, ..Sel::default() }])[8..], ["Extract here", "Pack, send and share", "Tools", "Move to Trash", "Delete permanently", "Properties"]);
+    assert_eq!(level(&home, &[Sel { archive: true, ..Sel::default() }])[8..], ["Extract here", "Compress, send and share", "Tools", "Move to Trash", "Delete permanently", "Properties"]);
     assert_eq!(level(&home, &[Sel { folder: true, ..Sel::default() }]),
-               ["New folder", "New document", "Open", "Open in a new tab", "Cut", "Copy", "Copy location", "Rename", "Pack, send and share", "Tools", "Move to Trash", "Delete permanently", "Properties"]);
+               ["New folder", "New document", "Open", "Open in a new tab", "Cut", "Copy", "Copy location", "Rename", "Compress, send and share", "Tools", "Move to Trash", "Delete permanently", "Properties"]);
     assert_eq!(level(&Where::Trash, &[Sel::default()]), ["Put back", "Delete permanently", "Properties"]);
 }
 
@@ -512,7 +511,7 @@ fn a_sub_menu_works_in_folders_by_pointer_keys_and_screen_reader() {
     let menu = f.menu.as_ref().unwrap();
     let Some((number, row)) = menu.beside.due else { panic!("pointing begins the pause") };
     assert_eq!((row, menu.beside.open, menu.hover), (pack, None, Some(pack)));
-    assert_eq!(f.menu_told, format!("Pack, send and share, sub-menu, {} lines", lines[pack].sub.len()));
+    assert_eq!(f.menu_told, format!("Compress, send and share, sub-menu, {} lines", lines[pack].sub.len()));
     f.update(pop(PopupMsg::Due(number)));
     assert_eq!(f.menu.as_ref().unwrap().beside.open, Some(pack));
     f.update(pop(PopupMsg::SubHover(Some(place))));

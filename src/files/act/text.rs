@@ -1,4 +1,4 @@
-// What an act says of the things it did, and the names it refuses.
+//! What an act says of the things it did, and the names it refuses.
 
 use std::path::{Path, PathBuf};
 
@@ -34,7 +34,7 @@ pub(in crate::files) fn failed_words(over: &Over, verb: &str) -> String {
     }
 }
 
-pub(super) fn names(list: &[String]) -> String {
+pub(in crate::files) fn names(list: &[String]) -> String {
     let shown = &list[..list.len().min(NAMES_SAID)];
     let out = shown.join(", ");
     if list.len() > NAMES_SAID {

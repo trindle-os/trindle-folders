@@ -1,4 +1,4 @@
-// Tests of the phone link: its containers, names and a made-up phone.
+//! Tests of the phone link: its containers, names and a made-up phone.
 
 use super::*;
 use std::collections::{BTreeMap, VecDeque};
@@ -72,7 +72,7 @@ fn storage_names_and_dates() {
     assert!(matches!(refused(0x200F, "a"), Error::Denied(_)));
     assert!(matches!(refused(0x2019, "a"), Error::Busy(_)));
     assert_eq!(refused(0x200C, "a").to_string(), "The phone is full.");
-    assert_eq!(refused(0x2002, "a").to_string(), "The phone refused that (code 2002).");
+    assert_eq!(refused(0x2002, "a").to_string(), "That didn't work on the phone (code 2002).");
 }
 
 #[test]
@@ -349,6 +349,12 @@ fn walk(glue: bool, no_length: bool) {
     assert_eq!(m.home().unwrap(), "/");
     assert_eq!(names(&mut m, "/"), ["Internal shared storage", "SD card"]);
     assert_eq!(names(&mut m, "/Internal shared storage"), ["DCIM", "Notes.txt"]);
+    let dcim = state.lock().unwrap().objects.iter().find(|(_, (i, _))| i.name == "DCIM").map(|(h, _)| *h).unwrap();
+    state.lock().unwrap().add(INTERNAL, dcim, "Holiday.jpg", Some(b"the other one".to_vec()));
+    assert_eq!(names(&mut m, "/Internal shared storage/DCIM"), ["Holiday (2).jpg", "Holiday.jpg"]);
+    assert_eq!(fetch(&mut m, "/Internal shared storage/DCIM/Holiday (2).jpg"), b"the other one");
+    m.remove("/Internal shared storage/DCIM/Holiday (2).jpg").unwrap();
+    assert_eq!(names(&mut m, "/Internal shared storage/DCIM"), ["Holiday.jpg"]);
     let photo = m.stat("/Internal shared storage/DCIM/Holiday.jpg").unwrap();
     assert_eq!((photo.kind, photo.size, photo.modified), (Kind::File, 300_000, Some(1_791_030_605)));
 
@@ -364,13 +370,17 @@ fn walk(glue: bool, no_length: bool) {
     assert_eq!(fetch(&mut m, "/Internal shared storage/Notes.txt"), b"Ring John Smith");
 
     let big = pattern(280_000);
-    assert_eq!(m.write("/SD card/Music/Song.ogg", &mut &big[..], big.len() as u64, &mut |_| true).unwrap(), 280_000);
+    assert_eq!(m.write_new("/SD card/Music/Song.ogg", &mut &big[..], big.len() as u64, &mut |_| true).unwrap(), 280_000);
     assert!(fetch(&mut m, "/SD card/Music/Song.ogg") == big);
     let exact = pattern(PACKET * 3 - 12);
+    let again = m.write_new("/SD card/Music/Song.ogg", &mut &exact[..], exact.len() as u64, &mut |_| true);
+    assert!(matches!(again, Err(Error::Exists(_))), "{again:?}");
+    assert!(fetch(&mut m, "/SD card/Music/Song.ogg") == big, "the phone's file was deleted or written over");
     let before = state.lock().unwrap().empties;
-    m.write("/SD card/Music/Song.ogg", &mut &exact[..], exact.len() as u64, &mut |_| true).unwrap();
+    m.write_new("/SD card/Music/Exact.ogg", &mut &exact[..], exact.len() as u64, &mut |_| true).unwrap();
     assert_eq!(state.lock().unwrap().empties, before + 1);
-    assert!(fetch(&mut m, "/SD card/Music/Song.ogg") == exact);
+    assert!(fetch(&mut m, "/SD card/Music/Exact.ogg") == exact);
+    m.remove("/SD card/Music/Exact.ogg").unwrap();
     assert_eq!(names(&mut m, "/SD card/Music"), ["Song.ogg"]);
     assert_eq!(state.lock().unwrap().ragged, 0);
 
@@ -439,12 +449,12 @@ fn cancelling() {
         assert_eq!(fetch(&mut m, photo).len(), 300_000);
 
         let big = pattern(600_000);
-        let r = m.write("/SD card/Big.bin", &mut &big[..], big.len() as u64, &mut |done| done < 300_000);
+        let r = m.write_new("/SD card/Big.bin", &mut &big[..], big.len() as u64, &mut |done| done < 300_000);
         assert!(matches!(r, Err(Error::Cancelled)));
         assert_eq!(state.lock().unwrap().cancels, 2);
         assert_eq!(names(&mut m, "/SD card"), ["Music"]);
 
-        let r = m.write("/SD card/Short.bin", &mut &b"abc"[..], 10, &mut |_| true);
+        let r = m.write_new("/SD card/Short.bin", &mut &b"abc"[..], 10, &mut |_| true);
         assert!(r.is_err());
         assert_eq!(names(&mut m, "/SD card"), ["Music"]);
     }
@@ -460,7 +470,7 @@ fn a_camera_that_speaks_only_ptp() {
     let mut m = Mtp::over(Box::new(Fake(state))).unwrap();
     assert_eq!(names(&mut m, "/Memory card/DCIM"), ["IMG_0001.JPG"]);
     assert_eq!(fetch(&mut m, "/Memory card/DCIM/IMG_0001.JPG").len(), 5000);
-    m.write("/Memory card/note.txt", &mut &b"hi"[..], 2, &mut |_| true).unwrap();
+    m.write_new("/Memory card/note.txt", &mut &b"hi"[..], 2, &mut |_| true).unwrap();
     m.rename("/Memory card/note.txt", "/Memory card/DCIM/note.txt").unwrap();
     m.remove("/Memory card/DCIM/note.txt").unwrap();
     let r = m.rename("/Memory card/DCIM/IMG_0001.JPG", "/Memory card/DCIM/Sea.jpg");

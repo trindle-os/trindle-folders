@@ -1,4 +1,4 @@
-// Red is for an act that cannot be undone, and for a failure, and for nothing else (the rule for every design).
+//! Red is for an act that cannot be undone, and for a failure, and for nothing else. The toolkit draws a main action red when marked (`Node::cannot_be_undone`).
 
 use super::save_is_a_word::all_lines;
 
@@ -10,7 +10,7 @@ const FOR_GOOD: [(&str, &str, &str); 3] = [
     ("files/settings.rs", "let forget = button(stand_in::SHRED, t!(\"folders-settings-forget\", server = &r.server)).cannot_be_undone()", "Forget a kept login: the login and the addresses kept with it are let go for good, and the password must be typed again"),
 ];
 
-const TELLS: [&str; 1] = ["cannot be undone"];
+const TELLS: [&str; 3] = ["cannot be undone", "can't undo this", "can't get it back"];
 
 const NO_BUTTON: [(&str, &str); 2] = [
     ("common/no_writing_in_place.rs", "a list for a test, which says what the wipe tells the person"),

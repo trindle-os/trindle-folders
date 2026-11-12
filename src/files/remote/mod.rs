@@ -1,4 +1,4 @@
-// Places that are not on this computer's own disks.
+//! Places that are not on this computer's own disks: SFTP, FTP and WebDAV servers, and phones over MTP or PTP, all in Trindle's own Rust.
 
 mod address;
 mod dav;
@@ -44,13 +44,22 @@ impl Entry {
     }
 }
 
-#[derive(Clone, Debug, Default)]
+pub type Secret = zeroize::Zeroizing<String>;
+
+#[derive(Clone, Default)]
 pub struct Login {
-    pub password: Option<String>,
+    pub password: Option<Secret>,
     pub key: Option<PathBuf>,
     pub askpass: Option<PathBuf>,
     pub trust_new_host: bool,
     pub trust_cert: Option<String>,
+}
+
+impl std::fmt::Debug for Login {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        f.debug_struct("Login").field("password", &self.password.as_ref().map(|_| "(kept)")).field("key", &self.key)
+            .field("askpass", &self.askpass).field("trust_new_host", &self.trust_new_host).field("trust_cert", &self.trust_cert).finish()
+    }
 }
 
 pub type Progress<'a> = &'a mut dyn FnMut(u64) -> bool;
@@ -60,16 +69,7 @@ pub trait Remote: Send {
     fn list(&mut self, path: &str) -> Result<Vec<Entry>, Error>;
     fn stat(&mut self, path: &str) -> Result<Entry, Error>;
     fn read(&mut self, path: &str, to: &mut dyn Write, progress: Progress) -> Result<u64, Error>;
-    fn write(&mut self, path: &str, from: &mut dyn Read, size: u64, progress: Progress) -> Result<u64, Error>;
-    fn write_new(&mut self, path: &str, from: &mut dyn Read, size: u64, progress: Progress) -> Result<u64, Error> {
-        match self.stat(path) {
-            Ok(_) => return Err(Error::Exists(name_of(path).to_string())),
-            Err(Error::NotFound(_)) => {}
-            Err(Error::Io(e)) if e.kind() == io::ErrorKind::NotFound => {}
-            Err(e) => return Err(e),
-        }
-        self.write(path, from, size, progress)
-    }
+    fn write_new(&mut self, path: &str, from: &mut dyn Read, size: u64, progress: Progress) -> Result<u64, Error>;
     fn refuses_taken(&self) -> bool {
         false
     }
@@ -129,6 +129,15 @@ pub fn heard_words(host: &str, at: &str) -> String {
 impl crate::files::leave::Carries for Login {
     fn secret(&self) -> bool {
         self.password.is_some()
+    }
+}
+
+fn free(r: &mut dyn Remote, path: &str) -> Result<(), Error> {
+    match r.stat(path) {
+        Ok(_) => Err(Error::Exists(name_of(path).to_string())),
+        Err(Error::NotFound(_)) => Ok(()),
+        Err(Error::Io(e)) if e.kind() == io::ErrorKind::NotFound => Ok(()),
+        Err(e) => Err(e),
     }
 }
 
@@ -267,7 +276,7 @@ mod tests {
         assert_eq!(stopped, heard_words("nas.local", "10.0.0.7"));
         assert_eq!(Error::Heard { host: "nas.local".into(), at: "10.0.0.7".into(), port: 21 }.to_string(), stopped);
         for words in [&card, &stopped] {
-            assert!(words.starts_with("nas.local answers at 10.0.0.7") && words.contains("only heard on the network") && words.contains("so the password has not been sent."), "{words}");
+            assert!(words.starts_with("Folders found nas.local on the local network at 10.0.0.7") && words.contains("Folders hasn't sent your password."), "{words}");
         }
     }
 

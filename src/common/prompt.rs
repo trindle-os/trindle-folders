@@ -1,4 +1,4 @@
-// The password window a program's prompt opens, in the look of Settings.
+//! The password window a program's prompt opens, in the look of Settings.
 
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};

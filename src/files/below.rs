@@ -1,4 +1,4 @@
-// The folders inside each folder named in the path bar, for the small arrow after each name.
+//! The folders inside each folder named in the path bar, for the small arrow after each name.
 
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
@@ -230,13 +230,13 @@ mod tests {
         std::fs::set_permissions(dir.join("Papers/Recipes"), std::fs::Permissions::from_mode(0o000)).unwrap();
         let shut = std::fs::read_dir(dir.join("Papers/Recipes")).is_err();
         f.update(Msg::Below(BelowMsg::Open(0, crumbs[2].1.clone())));
-        let refused = subs(&f, &crumbs)[2] == Sub::Words("You are not allowed to open this folder.".into());
+        let refused = subs(&f, &crumbs)[2] == Sub::Words("You don't have permission to open this folder.".into());
         std::fs::set_permissions(dir.join("Papers/Recipes"), std::fs::Permissions::from_mode(0o755)).unwrap();
         assert!(shut, "{}", crate::common::files::tests::NOT_AS_ROOT);
         assert!(refused, "a folder that may not be opened is said to be one");
         std::fs::remove_dir(dir.join("Papers/Recipes")).unwrap();
         f.update(Msg::Below(BelowMsg::Open(0, crumbs[2].1.clone())));
-        assert_eq!(subs(&f, &crumbs)[2], Sub::Words("This folder is no longer there.".into()));
+        assert_eq!(subs(&f, &crumbs)[2], Sub::Words("This folder isn't there any more.".into()));
         f.go(0, Where::Folder(dir.join("Music")));
         assert!(!f.below.read.contains_key(&Where::Folder(dir.join("Papers"))));
         for at in [Where::Recent, Where::Trash, Where::Network] {

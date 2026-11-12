@@ -1,4 +1,4 @@
-// A pretend network for tests: nas.invalid wants jo's password "right" for everything but its Public share; asleep.invalid never answers.
+//! A pretend network for tests: nas.invalid wants jo's password "right" for everything but its Public share; asleep.invalid never answers.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};

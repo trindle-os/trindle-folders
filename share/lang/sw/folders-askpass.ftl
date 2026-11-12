@@ -1,7 +1,14 @@
 
+# machine translated (Swahili), not yet reviewed by a person.
 
-folders-askpass-default-question = Seva inaomba nenosiri.
+# Question shown in the password window when the connection program gave none.
+# SAFETY: needs a human review before it ships
+folders-askpass-default-question = Andika nenosiri la seva hii.
 
+# Title of the password window when a key needs its passphrase.
+# SAFETY: needs a human review before it ships
 folders-askpass-title-passphrase = Nenosiri la ufunguo
 
+# Title of the password window when a server needs its password.
+# SAFETY: needs a human review before it ships
 folders-askpass-title-password = Nenosiri la seva

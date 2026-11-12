@@ -1,4 +1,4 @@
-// The sign-in card.
+//! The sign-in card.
 
 use crate::files::app::Msg;
 use crate::toolkit::t;
@@ -33,7 +33,7 @@ pub fn view(a: &Ask, turn: u32) -> Node<Msg> {
         why_row(a),
         entry(a.user.clone(), t!("folders-shares-user-placeholder"), |t| share_msg(ShareMsg::User(t)))
             .key("shareuser").grab(user_turn).on_submit(share_msg(ShareMsg::Go)).on_escape(share_msg(ShareMsg::Close)),
-        entry(a.password.to_string(), t!("folders-shares-password"), |t| share_msg(ShareMsg::Password(t)))
+        entry(a.password.to_string(), t!("folders-shares-password"), |t| share_msg(ShareMsg::Password(t.into())))
             .secret().key("sharepassword").grab(password_turn).on_submit(share_msg(ShareMsg::Go)).on_escape(share_msg(ShareMsg::Close)),
         row(vec![
             label(remember()).width(Length::Fill),

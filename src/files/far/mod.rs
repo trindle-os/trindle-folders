@@ -1,4 +1,4 @@
-// Files' side of servers and phones.
+//! Files' side of servers and phones: copies, moves and deletes that reach them. A far item's path is its address, such as `sftp://jo@example.com/home/jo/notes.txt`.
 
 use std::os::unix::ffi::OsStrExt;
 use std::path::Path;
@@ -12,6 +12,7 @@ use super::work::Plan;
 mod card;
 mod copy;
 mod ends;
+pub(in crate::files) use ends::missing;
 #[cfg(test)]
 mod fake;
 mod hands;
@@ -32,6 +33,7 @@ pub use card::{Question, Why};
 pub use links::Links;
 pub use walk::run;
 pub use window::{Far, FarMsg, Listed, Then};
+pub(in crate::files) use window::forget_fetched;
 
 fn lock<T: ?Sized>(m: &Mutex<T>) -> MutexGuard<'_, T> {
     m.lock().unwrap_or_else(|e| e.into_inner())

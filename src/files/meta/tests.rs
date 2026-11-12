@@ -1,4 +1,4 @@
-// Tests of dates and flags, and of how a song or a photo is changed.
+//! Tests of dates and flags, and of how a song or a photo is changed: by a
 
 use std::fs;
 use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
@@ -111,5 +111,34 @@ fn dates_and_flags() {
     std::os::unix::fs::symlink(&p, &link).unwrap();
     assert_eq!(set_dates(&link, Some(when), None).unwrap_err().kind(), io::ErrorKind::InvalidInput);
     assert_eq!(set_flags(&link, Flags::default()).unwrap_err().kind(), io::ErrorKind::InvalidInput);
+    fs::remove_dir_all(&dir).unwrap();
+}
+
+#[test]
+fn an_old_tags_cover_and_comment_go_across_when_it_is_written_again() {
+    let dir = place("v22");
+    let p = dir.join("old.mp3");
+    let frame = |id: &[u8], data: &[u8]| {
+        let n = data.len() as u32;
+        let mut f = id.to_vec();
+        f.extend_from_slice(&[(n >> 16) as u8, (n >> 8) as u8, n as u8]);
+        f.extend_from_slice(data);
+        f
+    };
+    let mut body = frame(b"TT2", b"\0Old title");
+    body.extend(frame(b"COM", b"\0engsaid\0Recorded live"));
+    body.extend(frame(b"PIC", b"\0JPG\x03cover\0\xff\xd8\xff\xe0picture"));
+    let n = body.len() as u32;
+    let mut file = b"ID3\x02\x00\x00".to_vec();
+    file.extend_from_slice(&[(n >> 21 & 0x7f) as u8, (n >> 14 & 0x7f) as u8, (n >> 7 & 0x7f) as u8, (n & 0x7f) as u8]);
+    file.extend(body);
+    file.extend(song());
+    fs::write(&p, &file).unwrap();
+    write_id3(&p, &Id3 { title: "New title".into(), ..Id3::default() }).unwrap();
+    let got = fs::read(&p).unwrap();
+    let has = |b: &[u8]| got.windows(b.len()).any(|w| w == b);
+    assert!(has(b"COMM") && has(b"Recorded live"), "the comment was dropped");
+    assert!(has(b"APIC") && has(b"image/jpeg") && has(b"\xff\xd8\xff\xe0picture"), "the cover picture was dropped");
+    assert!(has(b"New title") && !has(b"Old title"));
     fs::remove_dir_all(&dir).unwrap();
 }

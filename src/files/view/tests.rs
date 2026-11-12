@@ -1,4 +1,4 @@
-// Tests of how the Files window is laid out.
+//! Tests of how the Files window is laid out.
 
 use super::*;
 
@@ -111,11 +111,19 @@ fn the_two_panes_are_always_the_same_width() {
 }
 
 #[test]
-fn the_top_bar_is_the_path_and_eight_buttons()  {
+fn the_top_bar_is_the_path_and_nine_buttons()  {
     let f = Files::new(Vec::new());
     let bar = toolbar(&f, f.pane(), f.side());
     let tips: Vec<String> = bar.items().iter().filter_map(|n| n.tip().map(str::to_string)).collect();
-    assert_eq!(tips.len(), 8, "{tips:?}");
+    assert_eq!(tips.len(), 9, "{tips:?}");
+    assert!(tips.iter().any(|t| t.starts_with("Show hidden files")), "{tips:?}");
+    use crate::toolkit::ui::App as _;
+    let mut f = f;
+    f.update(Msg::Hidden);
+    let tips: Vec<String> = toolbar(&f, f.pane(), f.side()).items().iter().filter_map(|n| n.tip().map(str::to_string)).collect();
+    assert!(tips.iter().any(|t| t.starts_with("Hide hidden files")), "{tips:?}");
+    f.update(Msg::Hidden);
+    let bar = toolbar(&f, f.pane(), f.side());
     assert!(bar.said().iter().any(|w| w.ends_with("New")), "and New, a worded button: {:?}", bar.said());
     assert!(tips.iter().all(|t| !t.starts_with("Undo") && !t.starts_with("Redo") && !t.starts_with("New folder") && !t.starts_with("Folders settings")), "{tips:?}");
 }
@@ -173,7 +181,7 @@ fn one_row_holds_the_buttons_and_the_path_and_search_takes_its_place() {
     f.room = (1200.0, 700.0);
     f.go(0, Where::Computer);
     let bar = toolbar(&f, f.pane(), 0);
-    assert!(bar.items().iter().filter_map(|n| n.tip()).any(|t| t.contains("nothing to search")));
+    assert!(bar.items().iter().filter_map(|n| n.tip()).any(|t| t.contains("can't search on this page")));
     f.update(Msg::Find(FindMsg::Open(None)));
     assert!(f.find.open.is_none());
     std::fs::remove_dir_all(&dir).unwrap();
@@ -299,7 +307,7 @@ fn two_panes_are_two_cards_with_the_strip_between() {
     assert_eq!(seen(&f), [(true, false), (false, true)], "the left pane's card is marked, then the strip; the right card is not");
     assert_eq!(strip_said(&view(&f)).unwrap(), ["button: Copy to the right pane", "button: Move to the right pane",
                                                 "button: Show this folder in the right pane", "button: Swap the panes",
-                                                "button: Link the two panes", "button: Pick what differs from the right pane",
+                                                "button: Link the two panes", "button: Select what differs from the right pane",
                                                 "button: Compare with the right pane"]);
     f.update(Msg::OtherPane);
     assert_eq!(seen(&f), [(false, true), (true, false)], "the mark follows the keyboard");

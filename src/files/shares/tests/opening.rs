@@ -1,4 +1,4 @@
-// A share opens as an ordinary folder.
+//! A share opens as an ordinary folder.
 
 use crate::files::app::{Files, Msg};
 use crate::files::dialogs::Dialog;
@@ -19,12 +19,12 @@ fn a_share_opens_as_a_folder() {
     let Some(Dialog::Share(a)) = &f.dialog else { panic!("no card: {}", f.said) };
     assert!(!a.failed && a.share.is_none() && a.remember);
     f.update(Msg::Share(ShareMsg::User("jo".into())));
-    f.update(Msg::Share(ShareMsg::Password("wrong".into())));
+    f.update(Msg::Share(ShareMsg::Password(String::from("wrong").into())));
     f.update(Msg::Share(ShareMsg::Go));
     let Some(Dialog::Share(a)) = &f.dialog else { panic!("the card closed") };
-    assert!(a.failed && a.why.contains("not right"), "{}", a.why);
+    assert!(a.failed && a.why.contains("is wrong"), "{}", a.why);
     assert!(a.password.is_empty() && a.user == "jo", "the wrong password is emptied, the name kept");
-    f.update(Msg::Share(ShareMsg::Password("right".into())));
+    f.update(Msg::Share(ShareMsg::Password(String::from("right").into())));
     f.update(Msg::Share(ShareMsg::Go));
     assert!(f.dialog.is_none(), "{}", f.said);
     assert_eq!(names(&f, p), ["Photos", "Public"]);

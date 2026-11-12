@@ -1,4 +1,4 @@
-// How close together Folders' rows sit.
+//! How close together Folders' rows sit. Three levels, Compact, Normal and
 
 use super::app::Files;
 use crate::toolkit::t;

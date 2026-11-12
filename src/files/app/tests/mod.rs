@@ -1,4 +1,4 @@
-// Tests of Files as a whole: panes, tabs, picking, keys, pins and where it starts. Shared set-up is here.
+//! Tests of Files as a whole: panes, tabs, picking, keys, pins and where it starts. Shared set-up is here.
 
 use crate::toolkit::ui::Ui;
 

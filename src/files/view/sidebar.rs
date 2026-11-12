@@ -1,4 +1,4 @@
-// The side bar of the Files window: Places, Pinned, Devices, Network and Shares.
+//! The side bar of the Files window: Places, Pinned, Devices, Network and Shares.
 
 use super::super::act::Land;
 use super::super::app::{Files, Msg};

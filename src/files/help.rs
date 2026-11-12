@@ -1,4 +1,4 @@
-// Which page of Help explains which failure message in Folders.
+//! Which page of Help explains which failure message in Folders. A message
 
 use std::io;
 
@@ -543,12 +543,12 @@ mod tests {
         f.load(0, 0);
         assert!(f.bad);
         assert_eq!(f.said_help, Some(ARCHIVE_NOT_OPENED));
-        assert!(super::super::view::view(&f).said().contains(&more()), "{:?}", f.said);
+        assert!(super::super::help_cases::window_has_more(&super::super::view::view(&f).said()), "{:?}", f.said);
         f.update(Msg::Help(ARCHIVE_NOT_OPENED));
         assert_eq!(f.helped, [ARCHIVE_NOT_OPENED]);
         f.say("Copied.", false);
         assert_eq!(f.said_help, None);
-        assert!(!super::super::view::view(&f).said().contains(&more()));
+        assert!(!super::super::help_cases::window_has_more(&super::super::view::view(&f).said()));
         f.say("Something else.", true);
         assert_eq!(f.said_help, None);
         let _ = std::fs::remove_dir_all(dir);

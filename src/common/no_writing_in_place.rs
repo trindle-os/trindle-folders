@@ -1,4 +1,4 @@
-// Nothing a person or the computer would miss is written over where it lies.
+//! Nothing a person would miss is written over where it lies, so a crash part way cannot leave half a file. Such files go through `common::files::write_whole` and its kin.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
@@ -16,7 +16,8 @@ const ALLOWED: [(&str, usize, &str); 10] = [
     ("files/wipe.rs", 3, "Wipe securely, which is asked to write over the file where it lies and says so before it does"),
 ];
 
-const TAKES: [(&str, usize, &str); 21] = [
+const TAKES: [(&str, usize, &str); 22] = [
+    ("files/rename.rs", 1, "Folders' own note of the names a rename of swaps parked, in its own data folder, once the rename is over or the names are put back"),
     ("common/earlier.rs", 2, "putting an earlier version back, as asked: its own spare copy cleared (the renames into place and back go through common::files::rename_new)"),
     ("files/archive/pack.rs", 2, "spare names of this work's own beside what is made: the spare archive after a failure or once it has its real name"),
     ("files/archive/unpack.rs", 4, "spare names of this work's own beside what is made: the folder an archive is unpacked in, and an earlier entry in that folder a later one replaces"),
@@ -24,12 +25,12 @@ const TAKES: [(&str, usize, &str); 21] = [
     ("toolkit/common/file_work/clip.rs", 1, "Folders' own note of what it last cut, in the session's own folder, once the cut is pasted or something else is copied"),
     ("files/far/copy.rs", 1, "the name of a spare file once it is open"),
     ("files/far/hands.rs", 2, "an empty folder a move has emptied, by the call that cannot remove one with anything in it, and a spare file this work made itself and could not finish"),
-    ("files/far/window.rs", 1, "a half-fetched copy made to be looked at"),
+    ("files/far/window.rs", 3, "a half-fetched copy made to be looked at, and the copies of server files in Trindle's own cache, removed when the window closes and at start-up; each is still on its server"),
     ("files/imaging.rs", 2, "a picture turned as asked: the turned copy, made new beside it under a name of the turn's own, is renamed over it whole, or removed if that could not be done"),
     ("files/index.rs", 1, "the search index's part file renamed over the old index; it is built again when missing"),
-    ("files/inside.rs", 2, "copies taken out of archives to be opened, in Trindle's own cache: all of them as it starts, and an older copy before a fresh one; each is still in its archive"),
+    ("files/inside.rs", 3, "copies taken out of archives to be opened, in Trindle's own cache: all of them as it starts, and an older copy (a file or a folder) before a fresh one; each is still in its archive"),
     ("files/locked.rs", 2, "copies taken out of a locked archive to be opened, in Trindle's own cache, removed as it closes so nothing unlocked stays; each is still in its archive"),
-    ("files/preview.rs", 2, "the copy of a file from a locked archive made to be looked at, in Trindle's own cache, removed when the viewer closes; it is still in the archive"),
+    ("files/preview.rs", 3, "the copy of a file from an archive made to be looked at, in Trindle's own cache, removed when the viewer closes and at start-up; it is still in the archive"),
     ("toolkit/common/file_work/proof.rs", 1, "the half-made copy this work made itself, while its name still leads to it: the third of the rule's own three, whose other two are in toolkit/sys/disk.rs"),
     ("toolkit/sys/disk.rs", 2, "the rule's own three: a thing given a name of this work's own within its opened folder, one name removed within an opened folder once it is proved to be the thing copied or asked about, and a half-made copy while its name still leads to it"),
     ("toolkit/sys/os.rs", 1, "the rename that takes no name already taken, which common::files::rename_new calls"),

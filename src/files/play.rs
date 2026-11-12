@@ -1,4 +1,4 @@
-// Videos and sounds played in the viewer.
+//! Videos and sounds played in the viewer. ffmpeg decodes inside the same bubblewrap box as the thumbnails (walled.rs); the sound goes to pw-play from outside the box, so the box has no sound socket.
 
 use std::collections::VecDeque;
 use std::fs::File;

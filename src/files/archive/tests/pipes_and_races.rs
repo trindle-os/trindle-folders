@@ -1,4 +1,4 @@
-// A name taken by something else while an archive is read or made.
+//! A name taken by something else while an archive is read or made.
 
 use super::*;
 

@@ -1,4 +1,4 @@
-// The few facts about drives that the volume list needs: which mounts the system runs from, and UDisks values read plainly.
+//! The few facts about drives that the volume list needs: which mounts the system runs from, and UDisks values read plainly.
 
 use std::collections::HashSet;
 

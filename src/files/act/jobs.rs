@@ -1,4 +1,4 @@
-// Work in the window: starting a job, stopping all of it, and what is said when one ends.
+//! Work in the window: starting a job, stopping all of it, and what is said when one ends.
 
 use std::fs;
 use std::path::{Path, PathBuf};

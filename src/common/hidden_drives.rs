@@ -1,4 +1,4 @@
-// The drives and parts a person has hidden: a hidden one stays in Drives, greyed, and is gone from Folders.
+//! The drives and parts a person has hidden, kept in `hidden-drives.conf`, one line each; they stay in Drives, greyed, and are gone from Folders.
 
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};

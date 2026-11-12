@@ -1,3 +1,5 @@
 
+# machine translated (Urdu), not yet reviewed by a person.
 
-folders-mod-window-title = فولڈرز
+# Title of the Folders window, shown in the window's title bar and in lists of open windows.
+folders-mod-window-title = Folders

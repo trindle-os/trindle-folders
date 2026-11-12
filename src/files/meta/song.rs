@@ -1,4 +1,4 @@
-// Reading and writing a song's ID3 tag, versions 1 and 2.
+//! Reading and writing a song's ID3 tag, versions 1 and 2.
 
 use std::fs::File;
 use std::io::{self, Read, Seek, SeekFrom};
@@ -38,9 +38,12 @@ pub fn write_id3(path: &Path, id3: &Id3) -> io::Result<()> {
             put_frame(&mut body, major, id, [0, 0], &encode(major, value));
         }
     }
-    if let Some(tag) = old.as_ref().filter(|t| t.major >= 3) {
-        for f in tag.frames.iter().filter(|f| !REPLACED.contains(&f.id.as_str())) {
-            put_frame(&mut body, major, &f.id, f.flags, &f.data);
+    if let Some(tag) = old.as_ref() {
+        for f in &tag.frames {
+            let (id, data) = if tag.major == 2 { match from_v22(f) { Some(d) => d, None => continue } } else { (f.id.clone(), f.data.clone()) };
+            if !REPLACED.contains(&id.as_str()) {
+                put_frame(&mut body, major, &id, f.flags, &data);
+            }
         }
     }
     let room = old.as_ref().map_or(0, |t| t.room);
@@ -63,6 +66,29 @@ pub fn write_id3(path: &Path, id3: &Id3) -> io::Result<()> {
             None => Ok(()),
         }
     })
+}
+
+fn from_v22(f: &Frame) -> Option<(String, Vec<u8>)> {
+    const NAMES: [(&str, &str); 28] = [
+        ("COM", "COMM"), ("ULT", "USLT"), ("TXX", "TXXX"), ("WXX", "WXXX"), ("TCM", "TCOM"), ("TCR", "TCOP"), ("TEN", "TENC"),
+        ("TLE", "TLEN"), ("TPA", "TPOS"), ("TPB", "TPUB"), ("TP2", "TPE2"), ("TP3", "TPE3"), ("TP4", "TPE4"), ("TT1", "TIT1"),
+        ("TT3", "TIT3"), ("TBP", "TBPM"), ("TKE", "TKEY"), ("TLA", "TLAN"), ("TOA", "TOPE"), ("TOT", "TOAL"), ("TXT", "TEXT"),
+        ("TSS", "TSSE"), ("TOR", "TORY"), ("TMT", "TMED"), ("TFT", "TFLT"), ("TRC", "TSRC"), ("UFI", "UFID"), ("POP", "POPM"),
+    ];
+    if f.id == "PIC" {
+        let (enc, kind, rest) = (*f.data.first()?, f.data.get(1..4)?, f.data.get(4..)?);
+        let mime = match &kind.to_ascii_uppercase()[..] {
+            b"JPG" => "image/jpeg".to_string(),
+            b"PNG" => "image/png".to_string(),
+            other => format!("image/{}", String::from_utf8_lossy(other).to_lowercase()),
+        };
+        let mut data = vec![enc];
+        data.extend_from_slice(mime.as_bytes());
+        data.push(0);
+        data.extend_from_slice(rest);
+        return Some(("APIC".into(), data));
+    }
+    NAMES.iter().find(|(old, _)| *old == f.id).map(|(_, new)| (new.to_string(), f.data.clone()))
 }
 
 const REPLACED: [&str; 7] = ["TIT2", "TPE1", "TALB", "TYER", "TDRC", "TRCK", "TCON"];

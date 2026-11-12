@@ -1,4 +1,4 @@
-// What the built-in viewer shows a file as, and the file read ready for it.
+//! What the built-in viewer shows a file as, and the file read ready for
 
 use std::io::{self, Read};
 use std::path::Path;
@@ -380,12 +380,12 @@ mod tests {
     fn broken_files_are_said_to_be(dir: &Path, png: &Path) {
         let pdf = dir.join("tiny.pdf");
         std::fs::write(&pdf, "oops").unwrap();
-        assert!(matches!(load(&pdf, &Limits::default()), Shown::Broken(w) if w == "PDF document"));
+        assert!(matches!(load(&pdf, &Limits::default()), Shown::Broken(w) if w == "a PDF document"));
         std::fs::write(&pdf, "%PDF-1.7\n1 0 obj").unwrap();
         assert!(matches!(load(&pdf, &Limits::default()), Shown::Other));
         let empty = dir.join("empty.png");
         std::fs::write(&empty, "").unwrap();
-        assert!(matches!(load(&empty, &Limits::default()), Shown::Broken(w) if w == "PNG picture"));
+        assert!(matches!(load(&empty, &Limits::default()), Shown::Broken(w) if w == "a PNG picture"));
         let jpg = dir.join("really.jpg");
         std::fs::copy(png, &jpg).unwrap();
         assert!(matches!(load(&jpg, &Limits::default()), Shown::Picture(_)));

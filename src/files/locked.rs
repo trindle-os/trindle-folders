@@ -1,4 +1,4 @@
-// Asking for the password of a locked zip or 7z.
+//! Asking for the password of a locked zip or 7z on a card laid over the window.
 
 use std::collections::VecDeque;
 use std::path::{Path, PathBuf};
@@ -68,7 +68,7 @@ type Listing = (Option<SystemTime>, Vec<archive::Entry>);
 
 #[derive(Clone)]
 pub enum UnlockMsg {
-    Password(String),
+    Password(Zeroizing<String>),
     Go,
     Tried(u64, Result<Option<Listing>, Refusal>),
     Relisted(PathBuf, Result<Listing, Refusal>),
@@ -94,7 +94,7 @@ pub fn view(u: &Unlock, turn: u32) -> Node<Msg> {
         Then::Unpack(..) | Then::Take(..) => ("archive-extract-symbolic", t!("folders-locked-extract")),
         _ => ("document-open-symbolic", t!("folders-locked-open")),
     };
-    let typed = entry(u.password.to_string(), t!("folders-locked-password"), |t| msg(UnlockMsg::Password(t)))
+    let typed = entry(u.password.to_string(), t!("folders-locked-password"), |t| msg(UnlockMsg::Password(t.into())))
         .key("unlockpassword").secret().grab(turn).on_submit(msg(UnlockMsg::Go)).on_escape(msg(UnlockMsg::Close)).width(Length::Fill);
     let under = match &u.wrong {
         Some(why) => note(why.clone()).tone(Tone::Problem),
@@ -119,16 +119,7 @@ pub fn view(u: &Unlock, turn: u32) -> Node<Msg> {
 
 impl Files {
     fn unlock_off<T: Send + 'static>(&mut self, job: impl FnOnce() -> T + Send + 'static, done: impl FnOnce(T) -> UnlockMsg + Send + 'static) {
-        match &self.post {
-            Some(post) => {
-                let post = post.clone();
-                let _ = std::thread::Builder::new().name("folders-unlock".into()).spawn(move || post.send(Msg::Unlock(done(job()))));
-            }
-            None => {
-                let m = done(job());
-                self.unlock_msg(m);
-            }
-        }
+        self.off_thread("folders-unlock", job, move |got| Msg::Unlock(done(got)));
     }
 
     pub(super) fn unlock_free(&self) -> bool {
@@ -255,7 +246,7 @@ impl Files {
         match m {
             UnlockMsg::Password(text) => {
                 if let Some(Dialog::Unlock(u)) = &mut self.dialog {
-                    u.password = Zeroizing::new(text);
+                    u.password = text;
                 }
             }
             UnlockMsg::Go => self.unlock_go(),
@@ -365,7 +356,7 @@ mod tests {
     }
 
     fn try_with(f: &mut Files, password: &str) {
-        f.update(Msg::Unlock(UnlockMsg::Password(password.into())));
+        f.update(Msg::Unlock(UnlockMsg::Password(String::from(password).into())));
         f.update(Msg::Unlock(UnlockMsg::Go));
     }
 
@@ -406,7 +397,7 @@ mod tests {
             let other = dir.join(format!("other-{stem}"));
             std::fs::create_dir(&other).unwrap();
             f.send_to(vec![arc], other.clone(), Kind::Other(Extra::Unpack(Place::Here)));
-            f.update(Msg::Unlock(UnlockMsg::Password("john".into())));
+            f.update(Msg::Unlock(UnlockMsg::Password(String::from("john").into())));
             f.update(Msg::Unlock(UnlockMsg::Close));
             assert!(f.dialog.is_none() && !f.bad && f.said.is_empty(), "{name}: {}", f.said);
             assert_eq!(count(&other), 0, "{name}");
@@ -519,10 +510,10 @@ mod tests {
         let mut f = Files::new(vec![dir.clone()]);
         f.send_to(vec![kept(&dir, "locked.rar")], out.clone(), Kind::Other(Extra::Unpack(Place::Folder)));
         assert!(f.dialog.is_none() && f.bad);
-        assert_eq!(f.said, "One item could not be extracted: locked.rar (it is a RAR locked with a password, which Folders cannot unlock; nothing is wrong with the file).");
+        assert_eq!(f.said, "One item could not be extracted: locked.rar (it's a RAR file with a password Folders can't unlock, but the file itself isn't damaged).");
         f.send_to(vec![kept(&dir, "locked-odd.7z")], out.clone(), Kind::Other(Extra::Unpack(Place::Folder)));
         assert!(f.dialog.is_none() && f.bad);
-        assert_eq!(f.said, "One item could not be extracted: locked-odd.7z (it is locked with a password and packed a way Folders cannot unlock).");
+        assert_eq!(f.said, "One item could not be extracted: locked-odd.7z (it uses a kind of password protection Folders can't unlock).");
         assert_eq!(count(&out), 0);
         let _ = std::fs::remove_dir_all(dir);
     }
@@ -570,11 +561,11 @@ mod tests {
         let tall = |f: &Files| Ui::new(view(card(f), f.turn), Theme::new(true, "#fbc711")).natural_height(WIDTH);
         let plain = tall(&f);
         assert!(said(&f).contains(&"secret: Password".to_string()) && !said(&f).contains(&"entry: Password".to_string()));
-        assert!(said(&f).contains(&"Kept only while this archive is open, never saved.".to_string()));
+        assert!(said(&f).contains(&"Folders forgets it when the archive closes.".to_string()));
         assert!(view(card(&f), f.turn).buttons().iter().all(|(tip, _)| !tip.contains("password")));
         f.update(Msg::Unlock(UnlockMsg::Go));
         assert!(!card(&f).busy && card(&f).wrong.is_none());
-        f.update(Msg::Unlock(UnlockMsg::Password("john".into())));
+        f.update(Msg::Unlock(UnlockMsg::Password(String::from("john").into())));
         let mut ui = Ui::new(view(card(&f), f.turn), Theme::new(true, "#fbc711"));
         ui.press_eye("unlockpassword");
         assert!(ui.shows_secret("unlockpassword"));

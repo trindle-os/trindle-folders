@@ -1,8 +1,6 @@
-// What the window does with each message about shares.
+//! What the window does with each message about shares.
 
 use std::path::PathBuf;
-
-use zeroize::Zeroizing;
 
 use crate::files::app::Files;
 use crate::files::help;
@@ -164,7 +162,7 @@ impl Files {
             }
             ShareMsg::Password(text) => {
                 if let Some(Dialog::Share(a)) = &mut self.dialog {
-                    a.password = Zeroizing::new(text);
+                    a.password = text;
                 }
             }
             ShareMsg::Remember(on) => {

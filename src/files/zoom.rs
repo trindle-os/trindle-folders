@@ -1,4 +1,4 @@
-// The Icons view's icon size.
+//! The Icons view's icon size.
 
 use crate::toolkit::t;
 

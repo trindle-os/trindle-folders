@@ -1,4 +1,4 @@
-// What is said of work, and what is refused while it goes.
+//! What is said of work, and what is refused while it goes.
 
 use std::fs;
 use std::path::{Path, PathBuf};

@@ -1,22 +1,32 @@
 # machine translated (Spanish), not yet reviewed by a person.
 
+# Name of the main button on the password card when the archive is being extracted.
 folders-locked-extract = Extraer
 
+# Name of the main button on the password card when the archive is being opened.
 folders-locked-open = Abrir
 
+# Placeholder and spoken name of the password box on the password card.
 folders-locked-password = Contraseña
 
-folders-locked-kept-note = Se guarda solo mientras este archivo comprimido esté abierto, nunca se almacena.
+# Line under the password box before anything has been tried: says the password is not saved.
+folders-locked-kept-note = Folders la olvida cuando se cierra el archivo comprimido.
 
-folders-locked-trying = Probándola
+# Words beside the spinning ring on the password card while a password is being tried.
+folders-locked-trying = Probando la contraseña
 
+# Title of the password card; the variable is the archive's name.
 folders-locked-title = Contraseña de { $name }
 
+# Tip of the round button that closes the password card.
 folders-locked-close = Cerrar
 
+# First line of the password card, saying which archive is locked; the variable is the archive's name.
 folders-locked-is-locked = { $name } está protegido con una contraseña.
 
-folders-locked-open-again = { $name } está protegido con una contraseña. Ábrelo de nuevo para escribirla.
+# Notice shown when another card is already open and an archive needs its password; the variable is the archive's name.
+folders-locked-open-again = { $name } está protegido con una contraseña. Ábrelo de nuevo para escribir la contraseña.
 
-folders-locked-could-not-read = No se pudo leer { $name }: { $why }.
+# Notice shown when a locked archive cannot be read whatever the password; the variables are the archive's name and the reason.
+folders-locked-could-not-read = Folders no pudo leer { $name }: { $why }.
 

@@ -1,4 +1,4 @@
-// Folders' side of the file work the toolkit does: its own kinds of work, the servers it reaches, and what it calls them.
+//! Folders' side of the file work the toolkit does: its own kinds of work, the servers it reaches, and what it calls them.
 
 use std::path::{Path, PathBuf};
 

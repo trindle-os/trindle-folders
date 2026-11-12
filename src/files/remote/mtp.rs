@@ -1,4 +1,4 @@
-// MTP, the way phones and cameras share their files over USB, in Trindle's own Rust.
+//! MTP, the way phones and cameras share their files over USB, in Trindle's
 
 use std::collections::HashMap;
 use std::io::{Read, Write};
@@ -506,12 +506,22 @@ impl Mtp {
         let handles = Take::new(&data).array()?;
         self.known.retain(|k, _| parent(k) != dir);
         let mut out = Vec::new();
+        let mut seen = std::collections::HashSet::new();
         for handle in handles {
-            let info = match self.info(handle, &what) {
+            let mut info = match self.info(handle, &what) {
                 Ok(info) => info,
                 Err(Error::NotFound(_)) => continue,
                 Err(e) => return Err(e),
             };
+            if !seen.insert(info.name.clone()) {
+                let (stem, ending) = match info.name.rfind('.').filter(|&i| i > 0) {
+                    Some(i) => info.name.split_at(i),
+                    None => (info.name.as_str(), ""),
+                };
+                let name = (2..).map(|n| format!("{stem} ({n}){ending}")).find(|n| !seen.contains(n)).expect("a free name");
+                seen.insert(name.clone());
+                info.name = name;
+            }
             let node = Node { storage: at.storage, handle, folder: info.folder() };
             self.known.insert(join(dir, &info.name), node);
             out.push(info);
@@ -623,15 +633,12 @@ impl Remote for Mtp {
         Ok(done)
     }
 
-    fn write(&mut self, path: &str, from: &mut dyn Read, size: u64, progress: Progress) -> Result<u64, Error> {
+    fn write_new(&mut self, path: &str, from: &mut dyn Read, size: u64, progress: Progress) -> Result<u64, Error> {
         let path = clean(path);
         let name = name_of(&path).to_string();
         let (dir, at) = self.place(&path)?;
-        if let Some(old) = self.existing(&dir, at, &path)? {
-            if old.folder {
-                return Err(Error::Exists(name));
-            }
-            self.delete(old.handle, &name)?;
+        if self.existing(&dir, at, &path)?.is_some() {
+            return Err(Error::Exists(name));
         }
         let handle = self.send_info(at, &name, UNDEFINED, size)?;
         let sent = self.command(SEND_OBJECT, &[]).and_then(|id| {
@@ -731,7 +738,7 @@ fn storage_name(b: &[u8]) -> Result<String, Error> {
         .into_iter()
         .map(|s| s.trim().replace('/', "-"))
         .find(|s| !s.is_empty())
-        .unwrap_or_else(|| "Storage".into()))
+        .unwrap_or_else(|| t!("folders-remote-mtp-storage-name").into()))
 }
 
 fn clean(path: &str) -> String {

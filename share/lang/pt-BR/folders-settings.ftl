@@ -1,110 +1,156 @@
 
+# machine translated (Brazilian Portuguese), not yet reviewed by a person.
 
-folders-settings-name = Configurações das Pastas
+# Name of the Folders settings card, and the screen reader name of the cog that opens it.
+folders-settings-name = Configurações do Folders
 
-folders-settings-tip = Configurações das Pastas (Ctrl+vírgula)
 
-folders-settings-not-saved = Não foi possível salvar.
+# Red words under a setting that could not be kept, in short.
+folders-settings-not-saved = O Folders não conseguiu salvar esta configuração.
 
-folders-settings-not-saved-because = Não foi possível salvar. Nada foi alterado, porque { $why }.
+# Red words under a setting that could not be kept; { $why } says why.
+folders-settings-not-saved-because = O Folders não conseguiu salvar esta configuração porque { $why }. Nada foi alterado.
 
-folders-settings-not-read = Não foi possível ler as configurações das Pastas, então as respostas habituais são mostradas, e nada aqui pode ser alterado até que possam ser lidas: { $why }.
+# Red words at the top of the settings card when the settings file cannot be read; { $why } says why.
+folders-settings-not-read = O Folders não conseguiu ler as próprias configurações: { $why }. Estão sendo mostradas as configurações habituais, e você não pode alterá-las até que o Folders consiga ler as que você salvou.
 
-folders-settings-no-ring = As unidades são abertas pelo anel do Trindle, que não está neste computador.
+# Note on the Drives part of the settings card when the ring is not on this computer.
+folders-settings-no-ring = Abrir unidades assim que você as conecta precisa do anel do Trindle, que não está neste computador.
 
-folders-settings-page-start = Quando as Pastas abrem
+# Choice on the settings card: the part about how Folders opens.
+folders-settings-page-start = Quando o Folders abre
 
-folders-settings-page-list = A lista
+# Choice on the settings card: the part about the list.
+folders-settings-page-list = Lista
 
+# Choice on the settings card: the part about drives.
 folders-settings-page-drives = Unidades
 
-folders-settings-page-logins = Logins guardados
+# Choice on the settings card: the part listing kept logins.
+# SAFETY: needs a human review before it ships
+folders-settings-page-logins = Logins salvos
 
-folders-settings-logins-about = Um login que você escolheu lembrar é enviado só para um endereço em que você o usou nos últimos 90 dias. Esquecer deixa um sair.
+# Note on the Kept logins part of the settings card.
+# SAFETY: needs a human review before it ships
+folders-settings-logins-about = O Folders só envia um login salvo para um endereço em que você o usou nos últimos 90 dias.
 
-folders-settings-no-logins = Nenhum login está guardado.
+# Note on the Kept logins part when no login is kept.
+# SAFETY: needs a human review before it ships
+folders-settings-no-logins = Nenhum login salvo.
 
-folders-settings-logins-wait = Consultando o chaveiro…
+# Note on the Kept logins part while the keyring is being asked.
+folders-settings-logins-wait = Carregando logins salvos…
 
+# Choice on the settings card, under When Folders opens: Home on the left and Recent on the right.
 folders-settings-start-usual = Início e Recentes
 
+# One line under that choice.
 folders-settings-start-usual-sub = Início à esquerda, Recentes à direita.
 
-folders-settings-start-last = Onde cada painel foi deixado
+# Choice on the settings card, under When Folders opens: each pane opens where it was left.
+folders-settings-start-last = Onde você deixou cada painel
 
+# One line under that choice.
 folders-settings-start-last-sub = Cada painel abre na pasta em que estava.
 
-folders-settings-start-chosen = Locais definidos aqui
+# Choice on the settings card, under When Folders opens: the person sets a place for each pane.
+folders-settings-start-chosen = Locais que você escolhe
 
-folders-settings-start-chosen-sub = Você escolhe um local para cada painel abaixo.
 
+# Name of a place a pane can start in: the Recent list.
 folders-settings-place-recent = Recentes
 
+# Name of a place a pane can start in: the home folder.
 folders-settings-place-home = Início
 
+# Name of a place a pane can start in: the Documents folder.
 folders-settings-place-documents = Documentos
 
+# Name of a place a pane can start in: the Downloads folder.
 folders-settings-place-downloads = Downloads
 
+# Name of a place a pane can start in: the Pictures folder.
 folders-settings-place-pictures = Imagens
 
+# Name of a place a pane can start in: the Trash.
 folders-settings-place-trash = Lixeira
 
+# Name of the setting for where the left pane starts.
 folders-settings-left-pane = Painel esquerdo
 
-folders-settings-left-pane-sub = Onde o painel esquerdo começa.
 
+# Name of the setting for where the right pane starts.
 folders-settings-right-pane = Painel direito
 
-folders-settings-right-pane-sub = Onde o painel direito começa.
 
+# Title of the folder chooser that opens from a pane's setting.
 folders-settings-choose-title = Escolha onde o painel começa
 
-folders-settings-choose-accept = Escolher
 
-folders-settings-forget-failed = Não foi possível esquecer { $server }: { $why }
+# Red words under the Kept logins list when a login could not be let go; { $server } is the computer and { $why } says why.
+# SAFETY: needs a human review before it ships
+folders-settings-forget-failed = O Folders não conseguiu esquecer o login de { $server }: { $why }
 
+# Tip of the button beside a pane's place that opens the folder chooser.
 folders-settings-choose-another = Escolher outra pasta
 
-folders-settings-opens-chosen = As Pastas abrem com { $left } à esquerda e { $right } à direita.
 
-folders-settings-opens-last = As Pastas abrem cada painel onde foi deixado.
 
-folders-settings-opens-usual = As Pastas abrem com Início à esquerda e Recentes à direita.
 
-folders-settings-pages-tip = Parte das configurações das Pastas
+# Choice tip on the settings card that picks the part to show.
+folders-settings-pages-tip = Seção das configurações
 
-folders-settings-start-note = As Pastas leem isto cada vez que abrem. Elas abrem com um painel mostrando o local da esquerda; a chave Único e Duplo na barra de ferramentas mostra os dois.
+# Note on the first part of the settings card about when the settings are read.
+folders-settings-start-note = As mudanças valem na próxima vez que o Folders abrir. Pressione F3 para mostrar ou ocultar o painel direito.
 
-folders-settings-density-tip = Quão juntas ficam as linhas
+# Choice tip for how close the rows sit.
+folders-settings-density-tip = Espaçamento das linhas
 
-folders-settings-density = Linhas
+# Name of the setting for how close the rows sit.
+folders-settings-density = Espaçamento
 
-folders-settings-density-sub = Quão juntas as coisas ficam, em todas as visualizações.
+# One line under the rows setting.
+folders-settings-density-sub = Vale para todas as visualizações.
 
-folders-settings-ticks = Caixas de marcação para escolher
+# Name of the tick boxes setting, and tip of its switch.
+folders-settings-ticks = Caixas de marcação para selecionar
 
-folders-settings-ticks-sub = Uma caixinha em cada coisa a adiciona ao que está escolhido.
 
+# Name of the file endings setting, and tip of its switch.
 folders-settings-endings = Mostrar as extensões dos arquivos
 
-folders-settings-endings-sub = Desligado, report.pdf aparece como report.
+# One line under the file endings setting.
+folders-settings-endings-sub = Quando desligado, report.pdf aparece como report.
 
-folders-settings-list-note = Com as extensões desligadas, a última extensão de um nome fica de fora, exceto onde isso enganaria: um nome com duas extensões, um programa ou um arquivo que não é o que a extensão diz. Com as caixas de marcação ligadas, a caixa no título Nome escolhe tudo ou nada.
+# Note under the settings of the list part.
+folders-settings-list-note = Quando as extensões estão ocultas, o Folders ainda as mostra para programas, nomes com duas extensões e arquivos que não são o que a extensão diz. Com as caixas de marcação ligadas, a caixa no título Nome seleciona tudo ou nada.
 
+# Line for a kept login; { $users } are the user names and { $left } says how long it is kept.
 folders-settings-login-line = { $users }. { $left }.
 
+# Tip of the red button that lets a kept login go; { $server } is the computer.
+# SAFETY: needs a human review before it ships
 folders-settings-forget = Esquecer { $server }
 
+# Name of the setting that opens drives when plugged in, and tip of its switch.
 folders-settings-drives = Abrir as unidades quando ligadas
 
-folders-settings-drives-sub = Uma unidade USB é aberta quando ligada.
+# One line under the drives setting.
+folders-settings-drives-sub = Para unidades USB.
 
-folders-settings-ring-note = De qualquer modo ela está na barra lateral, e o anel diz que ela está lá.
+# Note on the Drives part when the ring is on this computer.
+folders-settings-ring-note = De qualquer modo, a unidade aparece na barra lateral e o anel mostra que ela está lá.
 
+
+
+# Choice on the settings card: the part about network shares.
 folders-settings-page-shares = Compartilhamentos
 
-folders-settings-reconnect = Reconectar compartilhamentos quando eu entrar
+# Name of the setting that mounts remembered network shares at login, and tip of its switch.
+# SAFETY: needs a human review before it ships
+folders-settings-reconnect = Reconectar compartilhamentos quando você entrar
 
-folders-settings-reconnect-sub = Desativado até você escolher: montar um compartilhamento pede a senha do administrador toda vez, e um compartilhamento que exige login espera você pressionar Reconectar.
+# One line under the reconnect setting: why it is off until chosen and what it costs.
+# SAFETY: needs a human review before it ships
+folders-settings-reconnect-sub = Desativado no início, porque conectar um compartilhamento exige a senha do administrador toda vez. Compartilhamentos que exigem login só se conectam quando você pressiona Reconectar.
 

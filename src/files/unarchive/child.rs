@@ -1,4 +1,4 @@
-// The child, in the box: reads the archive and writes frames.
+//! The child, in the box: reads the archive and writes frames.
 
 use std::fs::File;
 use std::io::{self, BufWriter, Read, Write};

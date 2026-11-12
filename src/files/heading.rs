@@ -1,4 +1,4 @@
-// The headings over the List view's columns, drawn so their edges can be dragged.
+//! The headings over the List view's columns, drawn so their edges can be dragged.
 
 use std::time::Instant;
 
@@ -429,7 +429,7 @@ mod tests {
                 let Act::Column(c) = l.act else { unreachable!() };
                 assert_eq!(l.icon == TICKED, Col::USUAL.contains(&c), "{c:?}");
             }
-            for word in ["Size", "Type", "Date changed", "Date made", "Permissions", "Owner", "Picture size", "Length", "Artist", "Album"] {
+            for word in ["Size", "Type", "Date changed", "Date created", "Permissions", "Owner", "Picture size", "Length", "Artist", "Album"] {
                 assert!(lines.iter().any(|l| l.words == word), "{word}");
             }
             let at = |c: Col| Col::ALL.iter().position(|k| *k == c).unwrap();

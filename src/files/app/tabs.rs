@@ -1,4 +1,4 @@
-// Tabs, the two panes, and opening places in them.
+//! Tabs, the two panes, and opening places in them.
 
 use std::path::{Path, PathBuf};
 

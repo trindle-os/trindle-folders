@@ -1,4 +1,4 @@
-// The bigger jobs the right-click menu opens a window for.
+//! The bigger jobs the right-click menu opens a window for: Compress,
 
 use std::cell::Cell;
 use std::collections::BTreeMap;
@@ -101,6 +101,7 @@ pub struct WipeAsk {
     pub items: Vec<PathBuf>,
     pub caveats: Vec<Caveat>,
     pub passes: usize,
+    pub left_out: Vec<String>,
 }
 
 pub struct Dupes {
@@ -411,11 +412,12 @@ impl Files {
     }
 
     pub(super) fn ask_wipe(&mut self, items: Vec<PathBuf>) {
-        let files: Vec<PathBuf> = items.into_iter().filter(|i| !super::reach::is_dir(i)).collect();
+        let (folders, files): (Vec<PathBuf>, Vec<PathBuf>) = items.into_iter().partition(|i| super::reach::is_dir(i));
+        let left_out = folders.iter().map(|f| work::name_of(f)).collect();
         let Some(first) = files.first() else { return self.say(t!("folders-tools-only-files-wiped"), false) };
         let caveats = wipe::caveats(first.parent().unwrap_or(Path::new("/")));
         self.asked = super::proof::asked(&files);
-        self.dialog = Some(Dialog::Tool(Tool::Wipe(WipeAsk { items: files, caveats, passes: 0 })));
+        self.dialog = Some(Dialog::Tool(Tool::Wipe(WipeAsk { items: files, caveats, passes: 0, left_out })));
     }
 
     pub(super) fn find_dupes(&mut self, roots: Vec<PathBuf>) {
@@ -698,6 +700,9 @@ pub fn view(t: &Tool, turn: u32) -> Node<Msg> {
                 head(super::icons::stand_in::WIPE, what),
                 label(t!("folders-tools-wipe-warning")),
             ];
+            if !w.left_out.is_empty() {
+                lines.push(note(t!("folders-tools-wipe-left-out", names = &super::act::names(&w.left_out))));
+            }
             for c in &w.caveats {
                 lines.push(note(caveat_words(c)));
             }
@@ -887,7 +892,7 @@ mod tests {
 
     #[test]
     fn wipe_securely_is_the_red_button_and_no_other_tool_has_one() {
-        let wipe = Tool::Wipe(WipeAsk { items: vec![PathBuf::from("/home/john/notes.txt")], caveats: Vec::new(), passes: 0 });
+        let wipe = Tool::Wipe(WipeAsk { items: vec![PathBuf::from("/home/john/notes.txt")], caveats: Vec::new(), passes: 0, left_out: Vec::new() });
         assert_eq!(view(&wipe, 0).for_good(), ["Wipe securely"]);
         assert!(act("x", "Resize", ToolMsg::Resize, false).for_good().is_empty());
     }
@@ -905,6 +910,20 @@ mod tests {
         f.bin = Some(super::super::trash::Bin::at(&d.join("Trash"), None));
         f.bin.as_ref().unwrap().ready().unwrap();
         f
+    }
+
+    #[test]
+    fn the_wipe_window_names_the_folders_it_leaves_out() {
+        let d = dir("wipe-left");
+        std::fs::write(d.join("note.txt"), b"x").unwrap();
+        std::fs::create_dir_all(d.join("Letters")).unwrap();
+        let mut f = files(&d);
+        f.ask_wipe(vec![d.join("note.txt"), d.join("Letters")]);
+        let Some(super::super::dialogs::Dialog::Tool(tool)) = &f.dialog else { panic!("no wipe window") };
+        let Tool::Wipe(w) = tool else { panic!() };
+        assert_eq!(w.items, [d.join("note.txt")]);
+        assert!(view(tool, 0).said().iter().any(|l| l.contains("Letters") && l.contains("left as they are")), "{:?}", view(tool, 0).said());
+        let _ = std::fs::remove_dir_all(d);
     }
 
     #[test]

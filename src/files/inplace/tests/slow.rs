@@ -1,4 +1,4 @@
-// A slow second click on a name renames it.
+//! A slow second click on a name renames it.
 
 use super::*;
 

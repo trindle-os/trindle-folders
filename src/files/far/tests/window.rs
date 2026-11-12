@@ -1,4 +1,4 @@
-// A server in a window: its names, its pane, its card and the copies opened from it.
+//! A server in a window: its names, its pane, its card and the copies opened from it.
 
 use std::fs;
 use std::os::unix::fs::MetadataExt;
@@ -52,10 +52,10 @@ fn a_name_a_server_gives_that_is_not_one_name_puts_nothing_outside_the_chosen_fo
     f.update(Msg::Far(FarMsg::Go));
     assert!(f.dialog.is_none(), "{}", f.said);
     assert_eq!(names(&f, f.side()), ["plain.txt"]);
-    assert!(f.bad && f.said.starts_with("Skipped 2: the server sent an unsafe name: "), "{}", f.said);
+    assert!(f.bad && f.said.starts_with("Folders skipped 2 items because their names aren't safe to use: "), "{}", f.said);
     assert!(f.said.contains("../../climbed.txt") && f.said.contains("/planted.txt"), "{}", f.said);
     f.far_open(Path::new(&format!("{base}/bag/..")));
-    assert!(f.bad && f.said == "Skipped: the server sent an unsafe name.", "{}", f.said);
+    assert!(f.bad && f.said == "Folders skipped a file because its name isn't safe to use.", "{}", f.said);
     assert!(End::Far(address(Path::new(&format!("{base}/"))).unwrap()).name() == "test.invalid", "a server's top goes under the server's name");
     for d in [&here, &far] {
         fs::remove_dir_all(d).unwrap();
@@ -227,7 +227,7 @@ fn an_opened_copy_sends_its_changes_back() {
     std::thread::sleep(std::time::Duration::from_millis(20));
     fs::write(&copy, "third\n").unwrap();
     f.far_saved(std::slice::from_ref(&copy));
-    assert!(f.said.contains("could not be saved") && fs::read_to_string(&copy).unwrap() == "third\n", "{}", f.said);
+    assert!(f.said.contains("couldn't save") && fs::read_to_string(&copy).unwrap() == "third\n", "{}", f.said);
     fs::rename(&gone, &far).unwrap();
     let i = f.cols[p].entries.iter().position(|e| e.name == "note.txt").unwrap();
     f.update(Msg::Choose(p, i));
@@ -235,4 +235,97 @@ fn an_opened_copy_sends_its_changes_back() {
     let Some(Dialog::Preview(pv)) = &f.dialog else { panic!("no viewer") };
     assert!(matches!(&pv.seen, preview::Seen::Text { blocks, .. } if blocks[0] == "server"), "{}", f.said);
     let _ = (fs::remove_dir_all(here), fs::remove_dir_all(far), fs::remove_dir_all(copy.parent().unwrap()));
+}
+
+#[test]
+fn files_of_one_name_from_two_folders_are_two_copies_each_sent_to_its_own() {
+    use crate::toolkit::ui::App;
+    let (here, far, base) = place("twins");
+    for d in ["a", "b"] {
+        fs::create_dir_all(far.join(d)).unwrap();
+        fs::write(far.join(d).join("notes.txt"), format!("{d}\n")).unwrap();
+    }
+    let mut f = Files::new(vec![here.clone()]);
+    f.update(Msg::Add(Vec::new()));
+    f.update(Msg::Far(FarMsg::Open));
+    f.update(Msg::Far(FarMsg::Address(base.clone())));
+    f.update(Msg::Far(FarMsg::Go));
+    let (fa, fb) = (PathBuf::from(format!("{base}/a/notes.txt")), PathBuf::from(format!("{base}/b/notes.txt")));
+    let copy_of = |f: &Files, file: &Path| f.far.fetched.iter().find(|(_, c)| c.far == file).map(|(k, _)| k.clone());
+    f.far_open(&fa);
+    let ca = copy_of(&f, &fa).expect("no copy of a");
+    f.far_open(&fb);
+    let cb = copy_of(&f, &fb).expect("no copy of b");
+    assert_ne!(ca, cb, "two server files share one copy here");
+    assert_eq!(copy_of(&f, &fa).as_ref(), Some(&ca), "the first file lost its copy");
+    assert_eq!(fs::read_to_string(&ca).unwrap(), "a\n", "the first copy was written over by the second");
+    std::thread::sleep(std::time::Duration::from_millis(20));
+    fs::write(&ca, "a changed\n").unwrap();
+    f.far_open(&fa);
+    assert_eq!(fs::read_to_string(&ca).unwrap(), "a changed\n", "opening again threw away a change not yet sent");
+    f.far_saved(std::slice::from_ref(&ca));
+    assert_eq!(fs::read_to_string(far.join("a/notes.txt")).unwrap(), "a changed\n", "{}", f.said);
+    assert_eq!(fs::read_to_string(far.join("b/notes.txt")).unwrap(), "b\n", "a change was sent to the other file");
+    std::thread::sleep(std::time::Duration::from_millis(20));
+    fs::write(&ca, "a seen\n").unwrap();
+    f.far_fetch(&fa, Then::View(7));
+    assert_eq!(fs::read_to_string(&ca).unwrap(), "a seen\n", "the viewer wrote over the copy open in an app");
+    f.far_saved(std::slice::from_ref(&ca));
+    assert_eq!(fs::read_to_string(far.join("a/notes.txt")).unwrap(), "a seen\n", "a save after viewing never reached the server: {}", f.said);
+    f.closing();
+    assert!(!ca.exists() && !cb.exists(), "copies of the server's files were left here");
+    let _ = (fs::remove_dir_all(here), fs::remove_dir_all(far));
+}
+
+#[test]
+fn a_rename_on_a_careless_server_never_goes_over_a_hidden_file() {
+    use crate::toolkit::ui::App;
+    let (here, far, base) = place("careless-hidden");
+    fs::write(far.join(".secret"), b"keep me").unwrap();
+    let mut f = Files::new(vec![here.clone()]);
+    f.update(Msg::Add(Vec::new()));
+    f.update(Msg::Far(FarMsg::Open));
+    f.update(Msg::Far(FarMsg::Address(base.clone())));
+    f.update(Msg::Far(FarMsg::Go));
+    let p = f.side();
+    assert!(!names(&f, p).contains(&".secret".to_string()), "hidden files show");
+    let i = f.cols[p].entries.iter().position(|e| e.name == "song.txt").unwrap();
+    f.update(Msg::Choose(p, i));
+    f.update(Msg::Pick(p, vec![i]));
+    f.update(Msg::Rename);
+    f.update(Msg::RenameText(".secret".into()));
+    f.update(Msg::RenameDone);
+    assert_eq!(fs::read(far.join(".secret")).unwrap(), b"keep me", "the hidden file was written over: {}", f.said);
+    assert!(far.join("song.txt").exists());
+    assert!(f.bad && f.renaming.as_ref().is_some_and(|r| r.why.is_some()), "{}", f.said);
+    let _ = (fs::remove_dir_all(here), fs::remove_dir_all(far));
+}
+
+#[test]
+fn a_link_on_a_server_to_a_big_file_opens() {
+    use crate::toolkit::ui::App;
+    let (here, far, base) = place("big-link");
+    fs::write(far.join("big.bin"), vec![3u8; 9 << 20]).unwrap();
+    std::os::unix::fs::symlink("big.bin", far.join("link.bin")).unwrap();
+    let mut f = Files::new(vec![here.clone()]);
+    f.update(Msg::Add(Vec::new()));
+    f.update(Msg::Far(FarMsg::Open));
+    f.update(Msg::Far(FarMsg::Address(base.clone())));
+    f.update(Msg::Far(FarMsg::Go));
+    let link = PathBuf::from(format!("{base}/link.bin"));
+    f.far_fetch(&link, Then::View(3));
+    let copy = anywhere(&fetch_dir("test.invalid"), "link.bin").expect("no copy was made");
+    assert_eq!(fs::metadata(&copy).unwrap().len(), 9 << 20, "{}", f.said);
+    let _ = (fs::remove_dir_all(here), fs::remove_dir_all(far), fs::remove_dir_all(copy.parent().unwrap()));
+}
+
+fn anywhere(dir: &Path, name: &str) -> Option<PathBuf> {
+    fs::read_dir(dir).ok()?.flatten().find_map(|e| if e.file_name() == name { Some(e.path()) } else if e.path().is_dir() { anywhere(&e.path(), name) } else { None })
+}
+
+#[test]
+fn a_reason_inside_a_sentence_has_no_stop_of_its_own() {
+    let e = Error::Failed("The server said no.".into());
+    let said = crate::toolkit::t!("folders-far-failed-why", name = "a.txt", why = &super::super::hands::reason(&e));
+    assert!(!said.contains(".)") && !said.contains(".."), "{said}");
 }

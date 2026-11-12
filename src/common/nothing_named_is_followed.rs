@@ -1,4 +1,4 @@
-// Test: nothing a stranger's file names is followed.
+//! Nothing a stranger's file names is followed: readers read their own bytes and no more.
 
 use super::no_writing_in_place::{all_code, code};
 

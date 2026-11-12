@@ -1,4 +1,4 @@
-// Copying one file between this computer and a server, with the room a server may fill held to what was listed.
+//! Copying one file between this computer and a server, with the room a server may fill held to what was listed.
 
 use std::fs::{self, File};
 use std::io::{self, Read, Seek, Write};

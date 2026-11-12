@@ -1,4 +1,4 @@
-// The longer work the archive, wipe and picture engines do, run as Files' other work is.
+//! The longer work the archive, wipe and picture engines do, run as Files'
 
 use std::sync::atomic::Ordering;
 

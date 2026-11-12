@@ -1,4 +1,4 @@
-// FTP in Trindle's own Rust.
+//! FTP in Trindle's own Rust: passive mode only (EPSV, then PASV), binary
 
 use std::io::{self, BufRead, BufReader, Read, Write};
 use std::net::{IpAddr, SocketAddr, TcpStream, ToSocketAddrs};
@@ -120,10 +120,10 @@ impl Ftp {
         if code == 331 {
             let pass = match (&password, anonymous) {
                 (Some(p), _) => p.clone(),
-                (None, true) => "anonymous@".into(),
+                (None, true) => super::Secret::new("anonymous@".into()),
                 (None, false) => return Err(Error::NeedsPassword),
             };
-            (code, text) = self.command(&format!("PASS {pass}"))?;
+            (code, text) = self.command(&super::Secret::new(format!("PASS {}", pass.as_str())))?;
         }
         match code {
             230 | 202 => Ok(()),
@@ -354,7 +354,8 @@ impl Remote for Ftp {
         Ok(done)
     }
 
-    fn write(&mut self, path: &str, from: &mut dyn Read, _size: u64, progress: Progress) -> Result<u64, Error> {
+    fn write_new(&mut self, path: &str, from: &mut dyn Read, _size: u64, progress: Progress) -> Result<u64, Error> {
+        super::free(self, path)?;
         let mut data = self.transfer(&format!("STOR {path}"), path)?;
         let mut buf = vec![0u8; BUF];
         let mut done = 0u64;

@@ -1,4 +1,4 @@
-// Shares remembered, pinned and mounted again, and NFS exports.
+//! Shares remembered, pinned and mounted again, and NFS exports.
 
 use std::path::{Path, PathBuf};
 
@@ -70,8 +70,10 @@ fn a_share_already_mounted_is_remembered() {
     assert_eq!(f.shares.remembered[0].at, at);
     f.shares.remembered.clear();
     f.shares.mounted = up();
+    f.shares.typed.insert("nas.invalid".into(), crate::common::smb::Login::typed("john", "secret"));
     f.smb_open(f.side(), &Address::parse("smb://nas.invalid/Media").unwrap());
     assert_eq!(f.shares.remembered.len(), 1, "opening one already mounted remembers it: {}", f.said);
+    assert!(f.shares.typed.is_empty(), "a password typed on the card outlived the opening it was for");
 }
 
 #[test]
@@ -174,13 +176,13 @@ fn an_nfs_address_that_cannot_be_opened_says_why() {
         assert!(f.bad, "{address}: {}", f.said);
         f.said.clone()
     };
-    assert_eq!(words("nfs://nas.invalid/srv/other"), "nas.invalid shares nothing called /srv/other.");
-    assert!(words("nfs://asleep.invalid/srv/media").contains("did not answer"));
-    assert!(words("nfs://nowhere.invalid/srv/media").contains("No computer called nowhere.invalid"));
-    assert_eq!(words("nfs://nas.invalid/srv/../etc"), "That is not the path of a shared folder.");
-    assert_eq!(words("nfs://nas.invalid/a%2Cvers=3"), "That is not the path of a shared folder.");
-    assert!(words("nfs://-oopt/srv/media").contains("could not be read"));
-    assert_eq!(nfs_words(&Problem::Denied, "nas", "/srv/media"), "nas does not let this computer open /srv/media.");
+    assert_eq!(words("nfs://nas.invalid/srv/other"), "nas.invalid doesn't share a folder called /srv/other.");
+    assert!(words("nfs://asleep.invalid/srv/media").contains("didn't respond"));
+    assert!(words("nfs://nowhere.invalid/srv/media").contains("Folders couldn't find a computer called nowhere.invalid"));
+    assert_eq!(words("nfs://nas.invalid/srv/../etc"), "That isn't a path to a shared folder.");
+    assert_eq!(words("nfs://nas.invalid/a%2Cvers=3"), "That isn't a path to a shared folder.");
+    assert!(words("nfs://-oopt/srv/media").contains("couldn't read that address"));
+    assert_eq!(nfs_words(&Problem::Denied, "nas", "/srv/media"), "This computer isn't allowed to open /srv/media on nas.");
     assert!(nfs_words(&Problem::Missing("nfs-common"), "nas", "/x").contains("nfs-common"));
 }
 

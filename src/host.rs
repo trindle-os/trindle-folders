@@ -1,4 +1,4 @@
-// What Folders tells the toolkit about itself: its words, the person's choices read from the files Trindle keeps them in, and what only the person may press.
+//! What Folders tells the toolkit about itself: its words, the person's choices read from the files Trindle keeps them in, and what only the person may press.
 
 use crate::common::{files, person_only};
 use crate::toolkit::host::{Act, Host};
@@ -42,6 +42,9 @@ impl Host for Folders {
     }
 
     fn language(&self) -> Option<String> {
+        if cfg!(test) {
+            return Some("C".into());
+        }
         Some(files::setting("language")).filter(|s| !s.trim().is_empty())
     }
 }

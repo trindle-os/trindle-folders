@@ -1,4 +1,4 @@
-// WebDAV, in Trindle's own Rust.
+//! WebDAV, in Trindle's own Rust.
 
 use std::io::{self, BufReader, Read, Write};
 use std::net::{IpAddr, SocketAddr, TcpStream, ToSocketAddrs};
@@ -44,7 +44,7 @@ pub struct Dav {
     at: Option<IpAddr>,
     port: u16,
     user: Option<String>,
-    password: Option<String>,
+    password: Option<super::Secret>,
     auth: Auth,
     home: String,
 }
@@ -179,10 +179,10 @@ impl Dav {
         let password = self.password.clone()?;
         match &mut self.auth {
             Auth::None => None,
-            Auth::Basic => Some(format!("Basic {}", base64(format!("{user}:{password}").as_bytes()))),
+            Auth::Basic => Some(format!("Basic {}", base64(super::Secret::new(format!("{user}:{}", password.as_str())).as_bytes()))),
             Auth::Digest { realm, nonce, opaque, qop, count } => {
                 *count += 1;
-                let ha1 = md5_hex(&format!("{user}:{realm}:{password}"));
+                let ha1 = md5_hex(&super::Secret::new(format!("{user}:{realm}:{}", password.as_str())));
                 let ha2 = md5_hex(&format!("{method}:{target}"));
                 let mut cnonce = [0u8; 8];
                 let _ = getrandom::fill(&mut cnonce);
@@ -551,6 +551,9 @@ impl Remote for Dav {
     fn read(&mut self, path: &str, to: &mut dyn Write, progress: Progress) -> Result<u64, Error> {
         let mut reply = self.send("GET", path, &[], Payload::Empty)?;
         check(reply.status, path)?;
+        if matches!(reply.body.left, Framing::ToClose) {
+            return Err(Error::Failed(t!("folders-remote-dav-cut-short").into()));
+        }
         let mut buf = vec![0u8; CHUNK];
         let mut done = 0u64;
         loop {
@@ -570,12 +573,6 @@ impl Remote for Dav {
             }
         }
         Ok(done)
-    }
-
-    fn write(&mut self, path: &str, from: &mut dyn Read, size: u64, progress: Progress) -> Result<u64, Error> {
-        let reply = self.send("PUT", path, &[("Content-Type", "application/octet-stream".into())], Payload::Stream(from, size, progress))?;
-        check(reply.status, path)?;
-        Ok(size)
     }
 
     fn write_new(&mut self, path: &str, from: &mut dyn Read, size: u64, progress: Progress) -> Result<u64, Error> {
@@ -610,7 +607,12 @@ impl Remote for Dav {
     }
 
     fn remove(&mut self, path: &str) -> Result<(), Error> {
-        let reply = self.send("DELETE", path, &[], Payload::Empty)?;
+        let (_, now, tag) = self.propfind(path, 0)?.into_iter().next().ok_or_else(|| Error::NotFound(name_of(path).to_string()))?;
+        if now.kind != Kind::File {
+            return Err(Error::Failed(t!("folders-remote-dav-not-a-file", name = name_of(bare(path)))));
+        }
+        let headers: Vec<(&str, String)> = strong(&tag).into_iter().map(|tag| ("If-Match", tag)).collect();
+        let reply = self.send("DELETE", path, &headers, Payload::Empty)?;
         check(reply.status, path)
     }
 

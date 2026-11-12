@@ -1,4 +1,4 @@
-// Tests of the FTP link: replies, listings, and a made-up FTP server.
+//! Tests of the FTP link: replies, listings, and a made-up FTP server.
 
 use super::*;
 use std::net::TcpListener;
@@ -316,7 +316,7 @@ fn a_link_goes_to_the_one_address_it_was_cleared_for() {
     let port = listener.local_addr().unwrap().port();
     let server = serve_once(listener);
     let a = Address::parse(&format!("ftp://jo:written@no-such-name.invalid:{port}/")).unwrap();
-    let held = Login { password: Some("held".into()), ..Login::default() };
+    let held = Login { password: Some(String::from("held").into()), ..Login::default() };
     let to = leave::leave(held, &shown).expect("shown on the card");
     drop(Ftp::connect(&a, &to).expect("the address shown was not the one dialled"));
     let heard = server.join().unwrap();
@@ -347,7 +347,7 @@ fn secure_ftp_asks_once_then_remembers() {
         configs.into_iter().map(|c| serve_secure(listener.accept().unwrap().0, Way::Explicit, c, &served)).collect::<Vec<_>>()
     });
     let a = Address::parse(&format!("ftpes://john@127.0.0.1:{port}/")).unwrap();
-    let pw = Login { password: Some("secret".into()), ..Login::default() };
+    let pw = Login { password: Some(String::from("secret").into()), ..Login::default() };
     match Ftp::connect(&a, &cleared(&a, &pw)).map(drop) {
         Err(Error::CertUnknown { host, fingerprint, .. }) => assert_eq!((host.as_str(), fingerprint.as_str()), ("127.0.0.1", fp1.as_str())),
         other => panic!("expected a certificate question, got {other:?}"),
@@ -360,7 +360,7 @@ fn secure_ftp_asks_once_then_remembers() {
     let mut back = Vec::new();
     assert_eq!(f.read("/home/secret.bin", &mut back, &mut |_| true).unwrap(), 200_000);
     assert!(back == file);
-    assert_eq!(f.write("/home/up.bin", &mut &b"hello secure"[..], 12, &mut |_| true).unwrap(), 12);
+    assert_eq!(f.write_new("/home/up.bin", &mut &b"hello secure"[..], 12, &mut |_| true).unwrap(), 12);
     drop(f);
     let mut f = Ftp::connect(&a, &cleared(&a, &pw)).unwrap();
     assert_eq!(f.home().unwrap(), "/home");
@@ -384,12 +384,12 @@ fn implicit_and_demanded_tls() {
         let server = std::thread::spawn(move || serve_secure(listener.accept().unwrap().0, way, config, b"tiny"));
         let scheme = if way == Way::Implicit { "ftps" } else { "ftp" };
         let a = Address::parse(&format!("{scheme}://john@127.0.0.1:{port}/")).unwrap();
-        let login = Login { password: Some("secret".into()), trust_cert: Some(fp), ..Login::default() };
+        let login = Login { password: Some(String::from("secret").into()), trust_cert: Some(fp), ..Login::default() };
         let mut f = Ftp::connect(&a, &cleared(&a, &login)).unwrap();
         let mut back = Vec::new();
         assert_eq!(f.read("/home/tiny", &mut back, &mut |_| true).unwrap(), 4);
         assert_eq!(back, b"tiny");
-        f.write("/home/up", &mut &b"up"[..], 2, &mut |_| true).unwrap();
+        f.write_new("/home/up", &mut &b"up"[..], 2, &mut |_| true).unwrap();
         drop(f);
         assert_eq!(server.join().unwrap(), Some(b"up".to_vec()), "{scheme}");
     }
@@ -413,7 +413,7 @@ fn round_trip_on_loopback() {
     let mut back = Vec::new();
     assert_eq!(f.read("/pub/big file.bin", &mut back, &mut |_| true).unwrap(), 70_000);
     assert!(back == file);
-    let n = f.write("/pub/up.bin", &mut &b"hello there"[..], 11, &mut |_| true).unwrap();
+    let n = f.write_new("/pub/up.bin", &mut &b"hello there"[..], 11, &mut |_| true).unwrap();
     assert_eq!(n, 11);
     drop(f);
     assert_eq!(server.join().unwrap(), b"hello there");

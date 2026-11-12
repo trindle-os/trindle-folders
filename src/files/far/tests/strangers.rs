@@ -1,4 +1,4 @@
-// What a server or a stranger's folder holds is never followed, written over or removed unproved.
+//! What a server or a stranger's folder holds is never followed, written over or removed unproved.
 
 use std::fs;
 use std::os::unix::ffi::OsStrExt;
@@ -32,22 +32,22 @@ fn a_link_or_a_pipe_in_what_is_sent_to_a_server_is_not_followed_and_not_waited_o
     assert_eq!(fs::read(sent.join("one.txt")).unwrap(), b"one");
     let mut failed = over.failed.clone();
     failed.sort();
-    assert_eq!(failed, ["holiday (a link, which is not followed, so it was not sent)", "invoice.pdf (a link, which is not followed, so it was not sent)",
-                        "pipe (not a file or a folder, so it was not sent)"]);
+    assert_eq!(failed, ["holiday (it's a link, so Folders didn't send it)", "invoice.pdf (it's a link, so Folders didn't send it)",
+                        "pipe (it isn't a file or folder, so Folders didn't send it)"]);
     let over = go(Kind::Move, vec![here.join("box/inner/invoice.pdf")], PathBuf::from(format!("{base}/box")), Answer::Skip);
-    assert_eq!(over.failed, ["invoice.pdf (a link, which is not followed, so it was not sent)"]);
+    assert_eq!(over.failed, ["invoice.pdf (it's a link, so Folders didn't send it)"]);
     assert!(fs::symlink_metadata(far.join("box/invoice.pdf")).is_err() && fs::symlink_metadata(here.join("box/inner/invoice.pdf")).is_ok());
     assert_eq!(fs::read_to_string(here.join("private/key")).unwrap(), "a made-up key");
     std::os::unix::fs::symlink(here.join("box/inner/one.txt"), here.join("alias.txt")).unwrap();
     std::os::unix::fs::symlink(&pipe, here.join("drain")).unwrap();
     let over = go(Kind::Copy, vec![here.join("alias.txt"), here.join("drain")], PathBuf::from(&base), Answer::Skip);
-    assert_eq!(over.failed, ["drain (not a file or a folder, so it was not sent)"]);
+    assert_eq!(over.failed, ["drain (it isn't a file or folder, so Folders didn't send it)"]);
     assert_eq!(fs::read(far.join("alias.txt")).ok().as_deref(), Some(&b"one"[..]));
     let dropped = here.join("alias.txt");
     let which = Which::of(&fs::symlink_metadata(&dropped).unwrap());
     let ctl = Ctl { fixed: Some(Answer::Both), sure: vec![work::Sure { path: dropped.clone(), which, held: None, known: None }], ..Ctl::default() };
     let over = work::run(Plan { kind: Kind::Copy, items: vec![dropped], to: PathBuf::from(&base), key: None }, &ctl, &|_| {});
-    assert_eq!(over.failed, ["alias.txt (a link, which is not followed, so it was not sent)"]);
+    assert_eq!(over.failed, ["alias.txt (it's a link, so Folders didn't send it)"]);
     for (address, said) in [("ftp://jo@example.com", true), ("ftps://jo@example.com", true), ("ftpes://jo@example.com", true),
                             ("sftp://jo@example.com", false), ("mtp://phone/Internal", true), ("dav://jo@example.com", false), ("davs://jo@example.com", false)] {
         let words = view(&Connect::new(address.into(), 0), 1).said();

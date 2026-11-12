@@ -1,4 +1,4 @@
-// Archives of every kind made by hand, for the tests.
+//! Archives of every kind made by hand, for the tests.
 
 use crate::files::unarchive::rar::RAR4_MARK;
 

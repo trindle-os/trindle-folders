@@ -1,4 +1,4 @@
-// Fonts in Folders: shown in the viewer and installed for this person alone.
+//! Fonts in Folders: shown in the viewer and installed for this person alone.
 
 use std::fs;
 use std::path::{Path, PathBuf};

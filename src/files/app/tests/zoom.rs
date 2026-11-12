@@ -1,4 +1,4 @@
-// The size of the icons: the keys, the wheel, and what the pointer is over staying where it is.
+//! The size of the icons: the keys, the wheel, and what the pointer is over staying where it is.
 
 use crate::files::icons::{ICON_SIZES, ICON_USUAL};
 use crate::files::zoom::Zoom;

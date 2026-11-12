@@ -1,4 +1,4 @@
-// A pretend server for tests: a folder under the temporary one.
+//! A pretend server for tests: a folder under the temporary one.
 
 use std::fs::{self, File};
 use std::io::{Read, Write};
@@ -148,6 +148,24 @@ fn pump(from: &mut dyn Read, to: &mut dyn Write, progress: Progress) -> Result<u
     }
 }
 
+impl Fake {
+    fn put(&mut self, path: &str, from: &mut dyn Read, size: u64, progress: Progress) -> Result<u64, Error> {
+        let _going = Counted::new(&self.0);
+        self.meanwhile();
+        let mut file = File::create(self.at(path))?;
+        if path.contains("short") {
+            let all = pump(from, &mut std::io::sink(), progress)?;
+            file.write_all(&vec![0u8; (all / 2) as usize])?;
+            return Ok(all);
+        }
+        if path.contains("fails") {
+            pump(&mut from.take(size / 2), &mut file, progress)?;
+            return Err(Error::Failed("The made-up server stopped part way.".into()));
+        }
+        pump(from, &mut file, progress)
+    }
+}
+
 impl Remote for Fake {
     fn home(&mut self) -> Result<String, Error> {
         Ok("/".into())
@@ -158,6 +176,9 @@ impl Remote for Fake {
             out.push(entry(d.file_name().to_string_lossy().replace(STROKE, "/"), &d.metadata()?));
         }
         Ok(out)
+    }
+    fn readlink(&mut self, path: &str) -> Result<String, Error> {
+        Ok(fs::read_link(self.at(path))?.to_string_lossy().into_owned())
     }
     fn stat(&mut self, path: &str) -> Result<Entry, Error> {
         if path.contains("nostat") {
@@ -179,21 +200,6 @@ impl Remote for Fake {
         }
         pump(&mut file, to, progress)
     }
-    fn write(&mut self, path: &str, from: &mut dyn Read, size: u64, progress: Progress) -> Result<u64, Error> {
-        let _going = Counted::new(&self.0);
-        self.meanwhile();
-        let mut file = File::create(self.at(path))?;
-        if path.contains("short") {
-            let all = pump(from, &mut std::io::sink(), progress)?;
-            file.write_all(&vec![0u8; (all / 2) as usize])?;
-            return Ok(all);
-        }
-        if path.contains("fails") {
-            pump(&mut from.take(size / 2), &mut file, progress)?;
-            return Err(Error::Failed("The made-up server stopped part way.".into()));
-        }
-        pump(from, &mut file, progress)
-    }
     fn write_new(&mut self, path: &str, from: &mut dyn Read, size: u64, progress: Progress) -> Result<u64, Error> {
         self.meanwhile();
         match File::options().write(true).create_new(true).open(self.at(path)) {
@@ -201,7 +207,7 @@ impl Remote for Fake {
             Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => return Err(Error::Exists(crate::files::remote::name_of(path).into())),
             Err(e) => return Err(e.into()),
         }
-        self.write(path, from, size, progress)
+        self.put(path, from, size, progress)
     }
     fn refuses_taken(&self) -> bool {
         !self.careless()

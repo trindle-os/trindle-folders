@@ -1,4 +1,4 @@
-// The one rule for asking the person's keyring, the Secret Service, for anything.
+//! The one rule for asking the person's keyring (Secret Service): never from the drawing thread, three seconds a question (`WAIT`), eight a piece of work (`DEADLINE`).
 
 use std::time::Duration;
 
@@ -285,7 +285,7 @@ mod tests {
             d.store(true, std::sync::atomic::Ordering::SeqCst);
             Ok(())
         });
-        assert!(got.as_ref().is_err_and(|why| why.starts_with("The turn with the keyring could not be taken (")), "{got:?}");
+        assert!(got.as_ref().is_err_and(|why| why.starts_with("Folders couldn't get access to the keyring (")), "{got:?}");
         assert!(!done.load(std::sync::atomic::Ordering::SeqCst), "the work was done with no turn taken");
         let _ = std::fs::remove_dir_all(file.parent().unwrap());
     }
@@ -313,14 +313,14 @@ mod tests {
         for (what, removing) in [("key", false), ("key", true), ("login", false)] {
             let meanwhile = waiting(what, removing);
             assert!(!meanwhile.failed, "not answered yet is not a failure");
-            assert!(meanwhile.words.contains("has not answered yet") && meanwhile.words.contains("this line will say so") && meanwhile.words.contains(what), "{meanwhile:?}");
+            assert!(meanwhile.words.contains("still waiting for the keyring") && meanwhile.words.contains(" yet.") && meanwhile.words.contains(what), "{meanwhile:?}");
             let good = late(what, removing, &Ok(()));
-            assert!(!good.failed && good.words == format!("The keyring answered late: the {what} is {}.", if removing { "removed" } else { "kept" }), "{good:?}");
+            assert!(!good.failed && good.words == format!("After a delay, the {what} was {}.", if removing { "removed from the keyring" } else { "saved in the keyring" }), "{good:?}");
             let bad = late(what, removing, &Err(locked_words().into()));
-            assert!(bad.failed && bad.words.contains("answered late and did not") && bad.words.ends_with(locked_words()), "{bad:?}");
+            assert!(bad.failed && bad.words.contains("Folders couldn't") && bad.words.ends_with(locked_words()), "{bad:?}");
             let never = late(what, removing, &Err(never_words().into()));
-            assert!(never.failed && !never.words.contains("answered late"), "{never:?}");
-            assert_eq!(never.words, format!("The keyring never answered, so the {what} is not {}.", if removing { "removed" } else { "kept" }));
+            assert!(never.failed && !never.words.contains("couldn't"), "{never:?}");
+            assert_eq!(never.words, format!("Folders gave up waiting for the keyring, so the {what} wasn't {}.", if removing { "removed" } else { "saved" }));
         }
     }
 

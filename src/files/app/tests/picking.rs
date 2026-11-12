@@ -1,4 +1,4 @@
-// Picking things: by click, box, tick, key and menu, and how grouping and the other pane change what is picked.
+//! Picking things: by click, box, tick, key and menu, and how grouping and the other pane change what is picked.
 
 use crate::files::groups::{rank, GroupBy};
 use crate::files::menu::Act;

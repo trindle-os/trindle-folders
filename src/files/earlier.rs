@@ -1,4 +1,4 @@
-// Earlier versions: Folders' side of the copies of the home folders that Trindle keeps each day (common/earlier.rs reads them).
+//! Earlier versions: Folders' side of the daily copies of the home folders (common/earlier.rs reads them), offered in the right-click menu.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -98,14 +98,7 @@ fn day_line(secs: i64) -> String {
 impl Files {
     pub(super) fn earlier_look(&mut self) {
         let store = self.earlier.store.clone();
-        match self.post.clone() {
-            Some(post) => {
-                let _ = std::thread::Builder::new().name("folders-earlier".into()).spawn(move || {
-                    post.send(Msg::Earlier(EarlierMsg::Any(store.any())));
-                });
-            }
-            None => self.earlier.any = store.any(),
-        }
+        self.off_thread("folders-earlier", move || store.any(), move |got| Msg::Earlier(EarlierMsg::Any(got)));
     }
 
     pub(super) fn earlier_holds(&self, path: &Path) -> bool {
@@ -182,14 +175,7 @@ impl Files {
                 What::Deleted(from) => store.gone_from(from).into_iter().map(|g| row(g.name, g.last)).collect(),
             }
         };
-        match self.post.clone() {
-            Some(post) => {
-                let _ = std::thread::Builder::new().name("folders-earlier".into()).spawn(move || {
-                    post.send(Msg::Earlier(EarlierMsg::Listed(id, read())));
-                });
-            }
-            None => self.earlier_msg(EarlierMsg::Listed(id, read())),
-        }
+        self.off_thread("folders-earlier", read, move |got| Msg::Earlier(EarlierMsg::Listed(id, got)));
     }
 
     fn earlier_card(&mut self, id: Option<u64>) -> Option<&mut Card> {
@@ -246,14 +232,7 @@ impl Files {
         };
         let store = self.earlier.store.clone();
         let put = move || store.put_back(&version, &to);
-        match self.post.clone() {
-            Some(post) => {
-                let _ = std::thread::Builder::new().name("folders-earlier".into()).spawn(move || {
-                    post.send(Msg::Earlier(EarlierMsg::PutBackDone(id, i, put())));
-                });
-            }
-            None => self.earlier_msg(EarlierMsg::PutBackDone(id, i, put())),
-        }
+        self.off_thread("folders-earlier", put, move |got| Msg::Earlier(EarlierMsg::PutBackDone(id, i, got)));
     }
 
     fn earlier_put_back_done(&mut self, id: u64, i: usize, got: Result<PutBack, String>) {
@@ -290,14 +269,7 @@ impl Files {
         r.busy = true;
         let (id, then) = (c.id, r.version.path.clone());
         let read = move || copies::same_content(&then, &now).map_err(|e| super::places::unread_words(&e));
-        match self.post.clone() {
-            Some(post) => {
-                let _ = std::thread::Builder::new().name("folders-earlier".into()).spawn(move || {
-                    post.send(Msg::Earlier(EarlierMsg::Compared(id, i, read())));
-                });
-            }
-            None => self.earlier_msg(EarlierMsg::Compared(id, i, read())),
-        }
+        self.off_thread("folders-earlier", read, move |got| Msg::Earlier(EarlierMsg::Compared(id, i, got)));
     }
 
     fn earlier_said(&mut self, id: Option<u64>, i: usize, words: String, bad: bool) {
@@ -578,13 +550,13 @@ pub(super) mod tests {
         assert!(f.menu_pick(Act::Earlier), "the menu has Earlier versions");
         assert_eq!(f.earlier_rows().unwrap().iter().map(|r| r.1).collect::<Vec<_>>(), [3, 2]);
         f.update(Msg::Earlier(EarlierMsg::Compare(0)));
-        assert_eq!(f.earlier_rows().unwrap()[0].2, Some(("It differs from the one there now.".to_string(), false)));
+        assert_eq!(f.earlier_rows().unwrap()[0].2, Some(("It's different from the current one.".to_string(), false)));
         f.update(Msg::Earlier(EarlierMsg::PutBack(0)));
         let read = |below: &str| std::fs::read_to_string(w.live(below)).unwrap_or_default();
         assert_eq!(read("Documents/report.txt"), "second draft");
         assert_eq!(read("Documents/report (before putting back).txt"), "third draft");
         let said = f.earlier_rows().unwrap()[0].2.clone().unwrap();
-        assert!(!said.1 && said.0.contains("kept beside it"), "{said:?}");
+        assert!(!said.1 && said.0.contains("is next to it"), "{said:?}");
         assert!(f.cols[0].entries.iter().any(|e| e.name == "report (before putting back).txt"), "the list shows it at once");
         f.update(Msg::Earlier(EarlierMsg::PutBack(0)));
         assert!(!w.live("Documents/report (before putting back) 2.txt").exists());
@@ -610,7 +582,7 @@ pub(super) mod tests {
         assert_eq!(rows.iter().map(|r| (r.0.as_str(), r.1)).collect::<Vec<_>>(), [("Old", 2), ("letter.odt", 2)]);
         f.update(Msg::Earlier(EarlierMsg::PutBack(1)));
         assert_eq!(std::fs::read_to_string(w.live("Documents/letter.odt")).unwrap(), "dear sir or madam");
-        assert_eq!(f.earlier_rows().unwrap()[1].2, Some(("Put back where it was.".to_string(), false)));
+        assert_eq!(f.earlier_rows().unwrap()[1].2, Some(("Folders put it back where it was.".to_string(), false)));
         f.update(Msg::Earlier(EarlierMsg::PutBack(0)));
         assert_eq!(std::fs::read_to_string(w.live("Documents/Old/a.txt")).unwrap(), "a");
         f.update(Msg::Undo);
@@ -638,7 +610,7 @@ pub(super) mod tests {
         assert!(f.dialog.is_none() && f.cols[0].tabs.len() == 2 && f.cols[0].at == at);
         assert_eq!(f.tab_name(&at), "Earlier: Letters");
         let note = f.earlier_note(&at).unwrap();
-        assert!(note.starts_with("An earlier copy, as it was ") && note.contains(" at ") && note.contains("Nothing in it can be changed"), "{note}");
+        assert!(note.starts_with("This is an earlier copy from ") && note.contains(" at ") && note.contains("You can't change it"), "{note}");
         assert!(f.earlier_note(&Where::Folder(w.live("Documents"))).is_none());
         assert_eq!(f.tab_name(&Where::Folder(w.live("Documents"))), "Documents");
         its_menu_offers_only_what_looks_or_copies_out(&mut f);

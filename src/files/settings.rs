@@ -1,4 +1,4 @@
-// Folders' own settings, which live here in Folders and not in the Settings program.
+//! Folders' own settings, which live here in Folders and not in the
 
 use std::path::{Path, PathBuf};
 
@@ -54,7 +54,7 @@ fn starts() -> [(&'static str, &'static str, &'static str); 3] {
     [
         ("", t!("folders-settings-start-usual"), t!("folders-settings-start-usual-sub")),
         ("last", t!("folders-settings-start-last"), t!("folders-settings-start-last-sub")),
-        ("chosen", t!("folders-settings-start-chosen"), t!("folders-settings-start-chosen-sub")),
+        ("chosen", t!("folders-settings-start-chosen"), ""),
     ]
 }
 
@@ -70,7 +70,7 @@ fn places() -> [(&'static str, &'static str); 6] {
 }
 
 fn side_words() -> [(&'static str, &'static str, &'static str); 2] {
-    [(LEFT, t!("folders-settings-left-pane"), t!("folders-settings-left-pane-sub")), (RIGHT, t!("folders-settings-right-pane"), t!("folders-settings-right-pane-sub"))]
+    [(LEFT, t!("folders-settings-left-pane"), ""), (RIGHT, t!("folders-settings-right-pane"), "")]
 }
 
 #[derive(Clone)]
@@ -146,11 +146,6 @@ fn place_path(text: &str, home: &Path) -> Option<PathBuf> {
         "~" => Some(home.to_path_buf()),
         t => Some(t.strip_prefix("~/").map_or_else(|| PathBuf::from(t), |r| home.join(r))),
     }
-}
-
-fn place_name(written: &str) -> String {
-    places().iter().find(|(v, _)| *v == written).map(|(_, w)| w.to_string())
-        .unwrap_or_else(|| Path::new(written).file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| written.to_string()))
 }
 
 impl Files {
@@ -321,7 +316,7 @@ fn own(m: OwnMsg) -> Msg {
 }
 
 fn line(c: &Card, key: &'static str, name: &str, sub: &str, controls: Vec<Node<Msg>>) -> Node<Msg> {
-    let mut words = vec![form_label(name.to_string()), note(sub.to_string())];
+    let mut words = super::dialogs::named(name, sub);
     if let Some((_, why)) = c.failed.as_ref().filter(|(k, _)| *k == key) {
         words.push(problem(why.clone(), super::help::NOT_KEPT));
     }
@@ -349,14 +344,6 @@ fn side_line(c: &Card, side: usize) -> Node<Msg> {
     line(c, key, heading, sub, vec![pick, other])
 }
 
-fn said(c: &Card) -> String {
-    match c.start.as_str() {
-        "chosen" => t!("folders-settings-opens-chosen", left = &place_name(&c.sides[0]), right = &place_name(&c.sides[1])),
-        "last" => t!("folders-settings-opens-last").to_string(),
-        _ => t!("folders-settings-opens-usual").to_string(),
-    }
-}
-
 pub fn view(c: &Card) -> Node<Msg> {
     let page = c.page.min(pages().len() - 1);
     let mut lines = vec![
@@ -382,7 +369,6 @@ fn start_page(c: &Card) -> Vec<Node<Msg>> {
     let mut lines = Vec::new();
     let all = starts();
     let chosen = all.iter().position(|(v, _, _)| *v == c.start).unwrap_or(0);
-    lines.push(note(said(c)).width(Length::Fill));
     let options = all.iter().map(|(_, name, sub)| (name.to_string(), sub.to_string())).collect();
     lines.push(radio_group(options, chosen, |i| own(OwnMsg::Start(i))));
     if let Some((_, why)) = c.failed.as_ref().filter(|(k, _)| *k == START) {
@@ -401,7 +387,7 @@ fn list_page(c: &Card) -> Vec<Node<Msg>> {
         .key("own:density");
     vec![
         line(c, DENSITY, t!("folders-settings-density"), t!("folders-settings-density-sub"), vec![strip]),
-        line(c, TICKS, t!("folders-settings-ticks"), t!("folders-settings-ticks-sub"),
+        line(c, TICKS, t!("folders-settings-ticks"), "",
              vec![switch(c.ticks, t!("folders-settings-ticks"), |on| own(OwnMsg::Ticks(on)))]),
         line(c, ENDINGS, t!("folders-settings-endings"), t!("folders-settings-endings-sub"),
              vec![switch(c.endings, t!("folders-settings-endings"), |on| own(OwnMsg::Endings(on)))]),
@@ -472,11 +458,11 @@ mod tests {
         }
         assert!(starts().iter().all(|(_, _, sub)| sub.chars().count() <= 45), "one short line each");
         assert!(first.contains("Left pane") && first.contains("Right pane") && first.contains("Choose another folder"), "{first}");
-        assert!(first.contains("Folders opens with Home on the left and Recent on the right."), "{first}");
+        assert!(!first.contains("Folders opens with"), "the usual start needs no sentence of its own: {first}");
         f.update(Msg::Own(OwnMsg::Page(1)));
         let list = words(&f);
-        assert!(list.contains("switch: Tick boxes for picking") && list.contains("switch: Show file endings"), "{list}");
-        assert!(list.contains("Rows") && list.contains("How close together things sit, in every view."), "{list}");
+        assert!(list.contains("switch: Tick boxes for selecting") && list.contains("switch: Show file endings"), "{list}");
+        assert!(list.contains("Spacing") && list.contains("Applies to every view."), "{list}");
         f.update(Msg::Own(OwnMsg::Page(2)));
         assert!(words(&f).contains("switch: Open drives when plugged in"));
         assert_eq!(kept(&dir), "");
@@ -490,7 +476,8 @@ mod tests {
         assert_eq!(kept(&dir), "start=chosen\nleft=~/Documents\nright=~/Work\nticks=yes\nendings=no\nopen_drives=yes\ndensity=compact\n");
         assert!(f.ticks && !f.endings && f.density == Density::Compact);
         f.update(Msg::Own(OwnMsg::Page(0)));
-        assert!(words(&f).contains("Folders opens with Documents on the left and Work on the right."), "{}", words(&f));
+        let shown = words(&f);
+        assert!(!shown.contains("Folders opens with"), "{shown}");
         f.update(Msg::Ask(super::super::dialogs::AskMsg::Close));
         assert!(f.dialog.is_none());
         f.update(Msg::Own(OwnMsg::Open));
@@ -513,7 +500,7 @@ mod tests {
         f.update(Msg::Own(OwnMsg::Page(1)));
         f.update(Msg::Own(OwnMsg::Ticks(true)));
         assert!(!f.ticks, "not kept, so not shown as on");
-        assert!(words(&f).contains(not_saved()), "{}", words(&f));
+        assert!(words(&f).contains("Folders couldn't save this setting"), "{}", words(&f));
         let Some(Dialog::Settings(c)) = &f.dialog else { panic!("the card stays") };
         assert!(!c.ticks && c.glow(TICKS) == 0);
         std::fs::remove_dir_all(&dir).unwrap();
@@ -533,15 +520,15 @@ mod tests {
         assert!(words(&f).contains(&top), "on every page: {}", words(&f));
         f.update(Msg::Own(OwnMsg::Ticks(true)));
         assert!(!f.ticks, "not kept, so not shown as on");
-        assert!(words(&f).contains(&format!("{} Nothing was changed, because the file that keeps it is not text and cannot be read.", not_saved())), "{}", words(&f));
+        assert!(words(&f).contains(&t!("folders-settings-not-saved-because", why = "the file that keeps it is not text and cannot be read")), "{}", words(&f));
         assert_eq!(std::fs::read(dir.join(conf::FILE)).unwrap(), was, "every setting is still in the file");
         std::fs::write(dir.join(conf::FILE), "density=roomy\nleft=~/Work\n").unwrap();
         f.update(Msg::Ask(crate::files::dialogs::AskMsg::Close));
         f.update(Msg::Own(OwnMsg::Open));
         f.update(Msg::Own(OwnMsg::Page(1)));
-        assert!(!words(&f).contains("could not be read"), "{}", words(&f));
+        assert!(!words(&f).contains("couldn't read its settings"), "{}", words(&f));
         f.update(Msg::Own(OwnMsg::Ticks(true)));
-        assert!(f.ticks && !words(&f).contains(not_saved()));
+        assert!(f.ticks && !words(&f).contains("Folders couldn't save this setting"));
         assert_eq!(kept(&dir), "density=roomy\nleft=~/Work\nticks=yes\n");
         std::fs::remove_dir_all(&dir).unwrap();
     }
@@ -600,7 +587,6 @@ mod tests {
         assert_eq!(written(Path::new("/srv/share"), home), "/srv/share");
         assert_eq!(place_path("~/Work", home), Some(PathBuf::from("/home/john/Work")));
         assert_eq!(place_path("recent:", home), None);
-        assert_eq!((place_name("~"), place_name("~/Work/2026"), place_name("trash:")), ("Home".to_string(), "2026".to_string(), "Trash".to_string()));
     }
 
     #[test]
@@ -618,7 +604,7 @@ mod tests {
         f.update(Msg::Own(OwnMsg::Page(LOGINS)));
         let said = words(&f);
         assert!(said.contains("nas.invalid") && said.contains("jo. 80 days left."), "{said}");
-        assert!(said.contains("old.invalid") && said.contains("jo. Asks again at the next opening."), "{said}");
+        assert!(said.contains("old.invalid") && said.contains("jo. You'll be asked again next time."), "{said}");
         assert!(said.contains("Forget nas.invalid"), "{said}");
         f.update(Msg::Own(OwnMsg::Forget("nas.invalid".into())));
         let said = words(&f);

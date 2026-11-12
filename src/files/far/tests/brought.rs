@@ -1,4 +1,4 @@
-// What is brought from and sent to a server, whole or not at all.
+//! What is brought from and sent to a server, whole or not at all.
 
 use std::fs;
 use std::io::Write;
@@ -96,12 +96,12 @@ fn a_move_removes_nothing_the_other_side_does_not_hold_whole() {
     fs::write(here.join("short.txt"), vec![3u8; 9000]).unwrap();
     let over = go(Kind::Move, vec![here.join("short.txt")], PathBuf::from(&base), Answer::Skip);
     assert_eq!(fs::read(here.join("short.txt")).map(|b| b.len()).ok(), Some(9000), "the first was removed though half of it arrived");
-    assert_eq!(over.failed, ["short.txt (not all of it arrived, so it is still where it was)"]);
+    assert_eq!(over.failed, ["short.txt (not all of it arrived, so the original hasn't moved)"]);
     assert!(!far.join("short.txt").exists(), "half a file was left there");
     fs::write(far.join("torn.txt"), vec![4u8; 9000]).unwrap();
     let over = go(Kind::Move, vec![PathBuf::from(format!("{base}/torn.txt"))], here.clone(), Answer::Skip);
     assert_eq!(fs::metadata(far.join("torn.txt")).map(|m| m.len()).ok(), Some(9000), "the first was removed though half of it arrived");
-    assert_eq!(over.failed, ["torn.txt (not all of it arrived, so it is still where it was)"]);
+    assert_eq!(over.failed, ["torn.txt (not all of it arrived, so the original hasn't moved)"]);
     assert!(!here.join("torn.txt").exists(), "half a file was left here");
     let over = go(Kind::Move, vec![PathBuf::from(format!("{base}/song.txt"))], here.clone(), Answer::Skip);
     assert!(over.failed.is_empty(), "{:?}", over.failed);
@@ -144,9 +144,8 @@ fn a_server_that_sends_more_than_it_listed_is_stopped_and_nothing_of_it_is_kept(
     f.update(Msg::Far(FarMsg::Address(base.clone())));
     f.update(Msg::Far(FarMsg::Go));
     f.far_open(&first);
-    assert_eq!(f.said, format!("endless.bin cannot be fetched: {}.", work::changed_why()));
-    let fetched = fetch_dir("test.invalid");
-    assert!(!fetched.join("endless.bin").exists(), "what came of it was left in the fetched copies");
+    assert_eq!(f.said, format!("Folders couldn't download endless.bin: {}.", work::changed_why()));
+    assert!(!anywhere_below(&fetch_dir("test.invalid"), "endless.bin"), "what came of it was left in the fetched copies");
     let over = go(Kind::Copy, vec![PathBuf::from(format!("{base}/song.txt"))], here.clone(), Answer::Skip);
     assert!(over.failed.is_empty() && fs::read(here.join("song.txt")).unwrap() == vec![5u8; 10_000], "{:?}", over.failed);
     let _ = (fs::remove_dir_all(here), fs::remove_dir_all(far));
@@ -164,7 +163,7 @@ fn a_file_whose_size_cannot_be_had_is_not_fetched() {
     f.update(Msg::Far(FarMsg::Go));
     f.far_open(&PathBuf::from(format!("{base}/nostat.bin")));
     assert!(f.said.contains("cannot be looked at"), "{}", f.said);
-    assert!(!fetch_dir("test.invalid").join("nostat.bin").exists());
+    assert!(!anywhere_below(&fetch_dir("test.invalid"), "nostat.bin"));
     let _ = (fs::remove_dir_all(here), fs::remove_dir_all(far));
 }
 
@@ -176,7 +175,7 @@ fn a_folder_that_came_in_part_from_a_server_is_not_removed_there() {
     let over = go(Kind::Move, vec![PathBuf::from(format!("{base}/box"))], here.join("in"), Answer::Skip);
     assert_eq!(fs::metadata(far.join("box/inner/torn.txt")).map(|m| m.len()).ok(), Some(9000), "a file that never arrived was removed with its folder");
     assert!(here.join("in/box/inner/one.txt").exists() && !far.join("box/inner/one.txt").exists(), "what did arrive was not moved");
-    assert_eq!(over.failed, ["torn.txt (not all of it arrived, so it is still where it was)", "box (not moved: some items)"]);
+    assert_eq!(over.failed, ["torn.txt (not all of it arrived, so the original hasn't moved)", "box (not moved: some items)"]);
     let _ = (fs::remove_dir_all(here), fs::remove_dir_all(far));
 }
 
@@ -271,4 +270,8 @@ fn a_file_here_that_is_replaced_stays_until_the_new_one_is_whole() {
     assert_eq!(there(&here), ["Trash", "box", "torn too.txt", "torn.txt"], "nothing is left beside them");
     assert_eq!(fs::read_dir(&bin.files).unwrap().count(), 0, "nothing went to the Trash");
     let _ = (fs::remove_dir_all(here), fs::remove_dir_all(far));
+}
+
+fn anywhere_below(dir: &std::path::Path, name: &str) -> bool {
+    fs::read_dir(dir).into_iter().flatten().flatten().any(|e| e.file_name() == name || (e.path().is_dir() && anywhere_below(&e.path(), name)))
 }

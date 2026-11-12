@@ -1,4 +1,4 @@
-// Zip, read: the end record's shapes and the numbers zip is written in.
+//! Zip, read: the end record's shapes and the numbers zip is written in.
 
 pub(super) mod dir;
 pub(super) mod dos;

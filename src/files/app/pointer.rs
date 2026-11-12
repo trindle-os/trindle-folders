@@ -1,4 +1,4 @@
-// The pointer over a pane's items, and the steps and letters that move the choice.
+//! The pointer over a pane's items, and the steps and letters that move the choice.
 
 use std::path::PathBuf;
 

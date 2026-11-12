@@ -1,4 +1,4 @@
-// Finds computers that announce shared folders by multicast DNS.
+//! Finds computers that announce shared folders by multicast DNS, with no avahi-daemon needed.
 
 use std::collections::BTreeMap;
 use std::io;
@@ -573,13 +573,6 @@ pub(super) mod tests {
         let mut none = Gathered::default();
         drain(&sock, &mut none, &mut buf, Instant::now());
         assert!(none.computers().is_empty());
-    }
-
-    #[test]
-    #[ignore = "needs a real network with other computers on it: run by hand"]
-    fn look_on_this_network() {
-        let asked = look(|found| println!("answered so far: {found:?}"));
-        println!("asked: {asked:?}; cards: {:?}", cards());
     }
 
     #[test]

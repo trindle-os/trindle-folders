@@ -1,4 +1,4 @@
-// How a name is shown when file endings are hidden: without its last ending (".pdf"), except where leaving it out would mislead.
+//! How a name is shown when file endings are hidden: without its last ending, except where that would mislead (a folder, a dotfile, two endings, a runnable file, or a file whose start says it is not what its ending says). Sorting, searching and typing to jump go by the whole name.
 
 use std::cell::RefCell;
 use std::collections::HashMap;

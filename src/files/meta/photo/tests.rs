@@ -1,4 +1,4 @@
-// Tests of reading and writing EXIF notes.
+//! Tests of reading and writing EXIF notes.
 
 use std::fs;
 use std::os::unix::fs::PermissionsExt;

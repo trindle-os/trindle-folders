@@ -1,4 +1,4 @@
-// Changing a name where it is drawn: the name in the list becomes a typing box, in every view.
+//! Changing a name where it is drawn: the name in the list becomes a
 
 #[cfg(test)]
 mod tests;
@@ -231,7 +231,16 @@ impl Files {
         let (from, to) = (a.path.clone(), new.path.clone());
         self.say(t!("folders-inplace-renaming", old = r.was(), name = &name), false);
         let now = self.rename_held(&r).then(|| PathBuf::from(new.to_string()));
-        self.far_do(a, move |link, _| link.rename(&from, &to), move |got| far::FarMsg::Renamed { was: Box::new(r), now, next, got });
+        self.far_do(a, move |link, _| {
+            if !link.refuses_taken() {
+                match link.stat(&to) {
+                    Ok(_) => return Err(super::remote::Error::Exists(super::remote::name_of(&to).to_string())),
+                    Err(e) if super::far::missing(&e) => {}
+                    Err(e) => return Err(e),
+                }
+            }
+            link.rename(&from, &to)
+        }, move |got| far::FarMsg::Renamed { was: Box::new(r), now, next, got });
     }
 
     pub(super) fn slow_arm(&mut self, p: usize, path: PathBuf, now: Instant) {

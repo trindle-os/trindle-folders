@@ -1,4 +1,4 @@
-// What each row of the menu does once it is chosen.
+//! What each row of the menu does once it is chosen.
 
 use std::path::{Path, PathBuf};
 
@@ -18,7 +18,6 @@ pub(super) fn view_msg(act: Act) -> Option<Msg> {
         Act::SortBy(i) => Msg::SortBy(i),
         Act::GroupBy(i) => Msg::GroupBy(i),
         Act::Flip => Msg::Flip,
-        Act::Hidden => Msg::Hidden,
         Act::Undo => Msg::Undo,
         Act::Redo => Msg::Redo,
         Act::Settings => Msg::Own(crate::files::settings::OwnMsg::Open),
@@ -317,22 +316,8 @@ impl Files {
     }
 
     fn as_root(&self, folder: &Path) -> bool {
-        let exe = match std::env::current_exe() {
-            Ok(e) if e.file_name().is_some_and(|n| n == "trindle") => vec![e.to_string_lossy().into_owned(), "folders".into()],
-            _ => match crate::common::run::find("trindle-folders").or_else(|| crate::common::run::find("trindle-files")) {
-                Some(e) => vec![e.to_string_lossy().into_owned()],
-                None => return false,
-            },
-        };
-        let mut argv = vec!["pkexec".to_string(), "/usr/bin/env".into()];
-        for name in ["WAYLAND_DISPLAY", "XDG_RUNTIME_DIR"] {
-            if let Ok(v) = std::env::var(name) {
-                argv.push(format!("{name}={v}"));
-            }
-        }
-        argv.extend(exe);
-        argv.push(crate::files::NEW_WINDOW.into());
-        argv.push(folder.to_string_lossy().into_owned());
+        let Some(socket) = crate::files::root::socket() else { return false };
+        let Some(argv) = crate::files::root::argv(Path::new(crate::files::root::INSTALLED), &socket, folder) else { return false };
         spawn(&argv.iter().map(String::as_str).collect::<Vec<_>>())
     }
 }

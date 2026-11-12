@@ -1,4 +1,4 @@
-// Going through an archive of any kind, handing each thing and its bytes on.
+//! Going through an archive of any kind, handing each thing and its bytes on.
 
 use std::io::{self, BufReader, Read};
 use std::os::unix::fs::MetadataExt;

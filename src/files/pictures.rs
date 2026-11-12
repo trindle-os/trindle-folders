@@ -1,4 +1,4 @@
-// Thumbnails in the Icons view.
+//! Thumbnails in the Icons view: each picture shown is asked of the
 
 use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, HashSet};
@@ -153,6 +153,9 @@ impl Files {
     }
 
     pub(super) fn pictures_wanted(&mut self) {
+        if self.as_root {
+            return;
+        }
         let want = self.pictures_needed();
         if want.is_empty() {
             return;

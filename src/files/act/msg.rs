@@ -1,4 +1,4 @@
-// What the window does with each message about files and work.
+//! What the window does with each message about files and work.
 
 use std::path::{Path, PathBuf};
 use std::sync::atomic::Ordering;
@@ -55,6 +55,12 @@ impl Files {
         false
     }
 
+    fn drop_question(&mut self) {
+        self.confirm = None;
+        self.asked.clear();
+        self.emptying = false;
+    }
+
     fn delete_msg(&mut self, msg: Msg) {
         match msg {
             Msg::Delete => {
@@ -64,13 +70,13 @@ impl Files {
             Msg::DeleteSure => {
                 let Some(items) = self.confirm.take() else { return };
                 let words = words(&Kind::Delete, &items, Path::new(""), &self.home);
-                self.forget_undo(&items);
-                self.start(Plan { kind: Kind::Delete, items, to: PathBuf::new(), key: None }, words, Turn::New);
+                let before = self.next_job;
+                self.start(Plan { kind: Kind::Delete, items: items.clone(), to: PathBuf::new(), key: None }, words, Turn::New);
+                if self.next_job != before {
+                    self.forget_undo(&items);
+                }
             }
-            Msg::NoDelete => {
-                self.confirm = None;
-                self.asked.clear();
-            }
+            Msg::NoDelete => self.drop_question(),
             _ => {}
         }
     }
@@ -109,7 +115,10 @@ impl Files {
                     self.said.clear();
                 }
             }
-            Msg::Waiting => self.say(t!("folders-act-closing-waits"), false),
+            Msg::Waiting => {
+                let words = if self.busy().asking { t!("folders-act-closing-waits") } else { t!("folders-act-closing-busy") };
+                self.say(words, false)
+            }
             Msg::Pause(id) => {
                 let Some(job) = self.job_mut(id) else { return };
                 job.paused = !job.paused;
@@ -192,7 +201,7 @@ impl Files {
                 self.pin_at = None;
                 self.drag = None;
                 self.dropping = None;
-                self.confirm = None;
+                self.drop_question();
                 self.renaming = None;
                 self.said.clear();
             }

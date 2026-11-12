@@ -1,4 +1,4 @@
-// What Files holds and how it answers.
+//! What Files holds and how it answers: tabs of two panes, what each pane
 
 use std::cell::{Cell, RefCell};
 use std::collections::HashSet;
@@ -272,6 +272,7 @@ pub struct Files {
     pub for_a_call: bool,
     pub seeking: u32,
     pub(super) pictures: super::pictures::Pictures,
+    pub(in crate::files) as_root: bool,
     pub(super) ahead: crate::toolkit::ahead::Typed,
     pub(super) head_down: Option<(usize, super::heading::Part)>,
     pub(super) sizing: Option<super::heading::Sizing>,
@@ -339,6 +340,7 @@ impl Files {
             locate: None, locate_line: false, pin_names: Default::default(), pin_rename: None, for_a_call: false, seeking: 0, room: (1200.0, 760.0), ahead: Default::default(),
             head_down: None, sizing: None, edge_last: None, nudging: 0, wheel: Cell::new(0.0), ticks: false, touch: Cell::new(false), endings: true, density: Default::default(), shown: Default::default(), below: Default::default(), ring: None, parts: super::alone::Parts::all(),
             panel: Default::default(), computer: Default::default(), earlier: Default::default(),
+            as_root: unsafe { libc::geteuid() } == 0,
         };
         files.read_settings();
         files.watch_also(&data_home());
@@ -394,9 +396,22 @@ impl Files {
         colour_named(self.kept.colours.get(path)?)
     }
 
+    pub(in crate::files) fn off_thread<T: Send + 'static>(&mut self, name: &'static str, job: impl FnOnce() -> T + Send + 'static, done: impl FnOnce(T) -> Msg + Send + 'static) {
+        match self.post.clone() {
+            Some(post) => {
+                let _ = std::thread::Builder::new().name(name.into()).spawn(move || post.send(done(job())));
+            }
+            None => {
+                use crate::toolkit::ui::App;
+                self.update(done(job()));
+            }
+        }
+    }
+
     pub fn closing(&self) {
         self.stop_all();
         self.unlocks.tidy();
+        self.far.forget_copies();
         #[cfg(not(test))]
         {
             super::kept::save_last(&self.cols[0].at, &self.cols[1].at);

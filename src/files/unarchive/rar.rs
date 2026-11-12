@@ -1,4 +1,4 @@
-// The parts of a split RAR, and what a RAR's headers say before it is unpacked.
+//! The parts of a split RAR, and what a RAR's headers say before it is unpacked.
 
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};

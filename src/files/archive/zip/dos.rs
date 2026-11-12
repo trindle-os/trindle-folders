@@ -1,4 +1,4 @@
-// The DOS code page and dates that zip names and times files in.
+//! The DOS code page and dates that zip names and times files in.
 
 use crate::common::clock::Local;
 

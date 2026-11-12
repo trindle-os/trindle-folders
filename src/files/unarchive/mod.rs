@@ -1,4 +1,4 @@
-// Archives of the kinds Trindle has no reader of its own for, read by the system's libarchive.
+//! Archives Trindle has no reader of its own for (RAR, disc images, CAB, cpio, RPM, .deb, LHA, zstd and others), read by the system's libarchive.
 
 mod child;
 mod frames;

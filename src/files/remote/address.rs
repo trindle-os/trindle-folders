@@ -1,4 +1,4 @@
-// Addresses of remote places, such as sftp, ftp, ftps, ftpes and mtp.
+//! Addresses of remote places, such as sftp, ftp, ftps, ftpes and mtp.
 
 use std::fmt;
 
@@ -55,11 +55,11 @@ impl Scheme {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct Address {
     pub scheme: Scheme,
     pub user: Option<String>,
-    pub password: Option<String>,
+    pub password: Option<super::Secret>,
     pub host: String,
     pub port: Option<u16>,
     pub path: String,
@@ -119,7 +119,7 @@ impl Address {
             return Err(bad(t!("folders-remote-address-line-break")));
         }
         let user = user.filter(|u| !u.is_empty());
-        Ok(Address { scheme, user, password, host, port, path })
+        Ok(Address { scheme, user, password: password.map(super::Secret::new), host, port, path })
     }
 
     pub fn join(&self, name: &str) -> Address {
@@ -133,6 +133,13 @@ impl Address {
 
     pub fn port(&self) -> u16 {
         self.port.unwrap_or(self.scheme.port())
+    }
+}
+
+impl fmt::Debug for Address {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("Address").field("scheme", &self.scheme).field("user", &self.user).field("password", &self.password.as_ref().map(|_| "(kept)"))
+            .field("host", &self.host).field("port", &self.port).field("path", &self.path).finish()
     }
 }
 
@@ -220,7 +227,10 @@ mod tests {
         assert_eq!(a.path, "");
         assert_eq!(a.to_string(), "ftp://[2001:db8::1]:21");
         let b = Address::parse("ftp://anna:p%40ss@ftp.example.com/pub").unwrap();
-        assert_eq!(b.password.as_deref(), Some("p@ss"));
+        assert_eq!(b.password.as_ref().map(|p| p.as_str()), Some("p@ss"));
+        assert!(!format!("{b:?}").contains("p@ss"), "a password was printed");
+        let login = super::super::Login { password: b.password.clone(), ..Default::default() };
+        assert!(!format!("{login:?}").contains("p@ss"), "a password was printed");
         assert_eq!(b.to_string(), "ftp://anna@ftp.example.com/pub");
         assert_eq!(b.port(), 21);
     }

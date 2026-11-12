@@ -1,4 +1,4 @@
-// The small windows the right-click menu opens inside Files: Open with, Properties, Send to and Folder colour.
+//! The small windows the right-click menu opens inside Files: Open with,
 
 use tiny_skia::{FillRule, PixmapMut, Transform};
 
@@ -545,9 +545,17 @@ pub(super) fn head_to(icon: &str, name: impl Into<String>, tip: &str, close: Msg
     ]).gap(12.0).width(Length::Fill).centred()
 }
 
+pub(super) fn named(name: &str, sub: &str) -> Vec<Node<Msg>> {
+    let mut words = vec![form_label(name.to_string())];
+    if !sub.is_empty() {
+        words.push(note(sub.to_string()));
+    }
+    words
+}
+
 pub(super) fn toggle(name: &str, sub: &str, on: bool, tip: &str, change: impl Fn(bool) -> Msg + 'static) -> Node<Msg> {
     row(vec![
-        column(vec![form_label(name.to_string()), note(sub.to_string())]).gap(4.0).width(Length::Fill),
+        column(named(name, sub)).gap(4.0).width(Length::Fill),
         switch(on, tip.to_string(), change),
     ]).gap(12.0).width(Length::Fill).centred()
 }
@@ -734,13 +742,17 @@ fn colour_view(folders: &[PathBuf], now: Option<&str>) -> Node<Msg> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_control_with_no_line_under_its_name_draws_none() {
+        assert_eq!(named("Read only", "").len(), 1);
+        assert_eq!(named("Read only", "Apps can open it but not change it.").len(), 2);
+    }
     use crate::files::places::Where;
     use crate::toolkit::ui::App;
 
     fn open_with_dialog(file: &Path) -> Dialog {
-        let app = |id: &str| Entry { id: id.into(), name: id.into(), icon: None, exec: id.into(), try_exec: None, wm_class: String::new(),
-                                     program: id.into(), kinds: Vec::new(), path: PathBuf::from("/nonexistent").join(id), category: "system",
-                                     keywords: Vec::new(), flatpak: None, appimage: None, terminal: false };
+        let app = |id: &str| Entry { id: id.into(), name: id.into(), icon: None, exec: id.into(), kinds: Vec::new(), path: PathBuf::from("/nonexistent").join(id), flatpak: None, appimage: None, terminal: false };
         Dialog::OpenWith(OpenWith { file: file.to_path_buf(), kind: "text/plain".into(), suggested: vec![app("one.desktop"), app("two.desktop")],
                                     every: Vec::new(), all: false, chosen: Some(0), default: None, always: false, find: String::new() })
     }
@@ -764,7 +776,7 @@ mod tests {
             o.chosen = None;
         }
         f.update(Msg::Ask(AskMsg::OpenIt));
-        assert!(f.dialog.is_some() && f.said == "Choose an app to open it with.", "{}", f.said);
+        assert!(f.dialog.is_some() && f.said == "Choose an app first.", "{}", f.said);
     }
 
     #[test]
@@ -829,9 +841,7 @@ mod tests {
 
     #[test]
     fn a_long_open_with_list_narrows_as_you_type() {
-        let app = |name: &str| Entry { id: format!("{name}.desktop"), name: name.into(), icon: None, exec: name.into(), try_exec: None, wm_class: String::new(),
-                                       program: name.into(), kinds: Vec::new(), path: PathBuf::from("/nonexistent").join(name), category: "system",
-                                       keywords: Vec::new(), flatpak: None, appimage: None, terminal: false };
+        let app = |name: &str| Entry { id: format!("{name}.desktop"), name: name.into(), icon: None, exec: name.into(), kinds: Vec::new(), path: PathBuf::from("/nonexistent").join(name), flatpak: None, appimage: None, terminal: false };
         let with = |n: usize| {
             let names = ["Alpha", "Bravo", "Cedar", "Delta", "Echo", "Foxtrot", "Golf", "Hotel", "India", "Juliet", "Kilo", "Lima"];
             let every: Vec<Entry> = names[..n].iter().map(|n| app(n)).collect();
@@ -879,8 +889,8 @@ mod tests {
     fn rights_read_in_words() {
         let me = unsafe { libc::getuid() };
         assert_eq!(rights(0o644, me), "rw-r--r--, you can open and change it");
-        assert_eq!(rights(0o444, me), "r--r--r--, you can open it, not change it");
-        assert_eq!(rights(0o700, me + 1), "rwx------, you cannot open it");
+        assert_eq!(rights(0o444, me), "r--r--r--, you can open it but not change it");
+        assert_eq!(rights(0o700, me + 1), "rwx------, you can't open it");
     }
 
     #[test]

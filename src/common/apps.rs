@@ -1,5 +1,6 @@
-// Installed applications from .desktop files, searched in XDG order so user entries (including Hidden=true) override system ones.
+//! Installed applications from .desktop files, searched in XDG order so user
 
+use crate::toolkit::t;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
@@ -15,25 +16,6 @@ pub fn app_dirs() -> Vec<PathBuf> {
         PathBuf::from("/usr/share/trindle/applications"),
         PathBuf::from("/usr/share/applications"),
     ]
-}
-
-fn category_of(cats: &str) -> &'static str {
-    let has = |c: &str| cats.split(';').any(|x| x == c);
-    for (piece, names) in [
-        ("games", &["Game"][..]),
-        ("development", &["Development", "IDE"][..]),
-        ("internet", &["Network", "WebBrowser", "Email", "Chat", "InstantMessaging"][..]),
-        ("office", &["Office"][..]),
-        ("graphics", &["Graphics"][..]),
-        ("media", &["AudioVideo", "Audio", "Video"][..]),
-        ("learning", &["Education", "Science"][..]),
-        ("utilities", &["Utility", "Accessories", "TextEditor", "Archiving", "Calculator"][..]),
-    ] {
-        if names.iter().any(|n| has(n)) {
-            return piece;
-        }
-    }
-    "system"
 }
 
 fn walk(base: &Path, dir: &Path, out: &mut Vec<(String, PathBuf)>) {
@@ -58,13 +40,8 @@ pub struct Entry {
     pub name: String,
     pub icon: Option<String>,
     pub exec: String,
-    pub try_exec: Option<String>,
-    pub wm_class: String,
-    pub program: String,
     pub kinds: Vec<String>,
     pub path: PathBuf,
-    pub category: &'static str,
-    pub keywords: Vec<String>,
     pub flatpak: Option<String>,
     pub appimage: Option<String>,
     pub terminal: bool,
@@ -146,6 +123,29 @@ fn locale_names(lang: &str) -> Vec<String> {
     }
     names.push(ll.to_string());
     names
+}
+
+fn bus_start(key: &str, path: &str, files: &[String]) -> Vec<String> {
+    let mut argv: Vec<String> = ["busctl", "--user", "call", key, path, "org.freedesktop.Application"].map(String::from).to_vec();
+    if files.is_empty() {
+        argv.extend(["Activate", "a{sv}", "0"].map(String::from));
+    } else {
+        argv.extend(["Open".into(), "asa{sv}".into(), files.len().to_string()]);
+        argv.extend(files.iter().map(|f| if is_link(f) { f.clone() } else { file_uri(Path::new(f)) }));
+        argv.push("0".into());
+    }
+    argv
+}
+
+fn runs(argv: &[String]) -> bool {
+    let Some(first) = argv.first() else { return false };
+    if !on_path(first) {
+        return false;
+    }
+    if Path::new(first).file_name().is_some_and(|n| n == "env") {
+        return argv[1..].iter().find(|a| !a.contains('=') && !a.starts_with('-')).is_none_or(|p| on_path(p));
+    }
+    true
 }
 
 fn on_path(program: &str) -> bool {
@@ -242,22 +242,13 @@ fn entry_from(id: &str, file_path: &Path, file: &super::keyfile::KeyFile, langs:
     }
     let local = |key: &str| langs.iter().find_map(|l| get(&format!("{key}[{l}]"))).or_else(|| get(key));
     let name = local("Name")?;
-    let mut keywords = langs.iter().find_map(|l| file.list(GROUP, &format!("Keywords[{l}]")))
-        .or_else(|| file.list(GROUP, "Keywords")).unwrap_or_default();
-    keywords.retain(|k| !k.is_empty());
-    keywords.extend(local("GenericName").filter(|g| !g.is_empty()));
     Some(Entry {
         id: id.to_string(),
         name,
         icon: get("Icon").filter(|i| !i.is_empty() && !is_old_stand_in(i)),
-        program: program_from(get("X-Flatpak").as_deref(), &exec),
         exec,
-        try_exec,
-        wm_class: get("StartupWMClass").map(|s| s.to_lowercase()).unwrap_or_default(),
         kinds: file.list(GROUP, "MimeType").unwrap_or_default(),
         path: file_path.to_path_buf(),
-        category: category_of(&get("Categories").unwrap_or_default()),
-        keywords,
         flatpak: get("X-Flatpak").filter(|f| !f.is_empty()),
         appimage: get("X-Trindle-AppImage").filter(|f| !f.is_empty()),
         terminal: yes("Terminal"),
@@ -283,21 +274,6 @@ pub fn entries() -> Vec<Entry> {
     }
     all.sort_by_key(|a| a.name.to_lowercase());
     all
-}
-
-fn program_from(flatpak: Option<&str>, line: &str) -> String {
-    if let Some(id) = flatpak {
-        return id.to_lowercase();
-    }
-    let Some(mut argv) = super::keyfile::command_words(line) else { return String::new() };
-    if let Some(at) = argv.iter().position(|a| a == "trindle-boxed" || a.ends_with("/trindle-boxed")) {
-        let skip = if argv.get(at + 1).is_some_and(|a| a == "--loose") { 3 } else { 2 };
-        argv.drain(..(at + skip).min(argv.len()));
-    }
-    argv.into_iter()
-        .find(|a| a != "env" && !a.ends_with("/env") && !a.contains('=') && !a.starts_with('-'))
-        .map(|a| Path::new(&a).file_name().map(|f| f.to_string_lossy().to_lowercase()).unwrap_or_default())
-        .unwrap_or_default()
 }
 
 #[cfg(test)]
@@ -376,7 +352,7 @@ fn launch_inner(app: &Entry, files: &[String], token: Option<String>, boxed: boo
     let Ok(file) = super::keyfile::KeyFile::load(&app.path) else { return false };
     if app.exec.is_empty() {
         let path = format!("/{}", app.key().replace(['.', '-'], "/"));
-        return super::run::spawn(&["busctl", "--user", "call", app.key(), &path, "org.freedesktop.Application", "Activate", "a{sv}", "0"]);
+        return super::run::spawn(&bus_start(app.key(), &path, files).iter().map(String::as_str).collect::<Vec<_>>());
     }
     let one_each = ["%f", "%u"].iter().any(|c| app.exec.contains(c)) && files.len() > 1;
     let rounds: Vec<&[String]> = match one_each {
@@ -386,6 +362,9 @@ fn launch_inner(app: &Entry, files: &[String], token: Option<String>, boxed: boo
     let mut started = false;
     for some in rounds {
         let Some((mut argv, folder)) = command_with(&file, &app.path, some) else { return false };
+        if !runs(&argv) {
+            return false;
+        }
         if app.terminal {
             if let Some((_, inside)) = terminal_argv(&argv) {
                 argv = inside;
@@ -477,7 +456,7 @@ pub fn choose_opener(id: &str, kinds: &[&str]) -> Result<(), String> {
 }
 
 pub(crate) fn choose_opener_in(path: &std::path::Path, id: &str, kinds: &[&str]) -> Result<(), String> {
-    let mut file = super::keyfile::KeyFile::load_kept(path).map_err(|e| format!("Nothing was changed, because {e}."))?;
+    let mut file = super::keyfile::KeyFile::load_kept(path).map_err(|e| t!("folders-app-opener-unreadable", why = e.to_string()))?;
     for kind in kinds {
         file.set("Default Applications", kind, id);
         let mut added = vec![id.to_string()];
@@ -591,7 +570,7 @@ pub fn file_uri(path: &Path) -> String {
     use std::os::unix::ffi::OsStrExt;
     let mut url = String::from("file://");
     for &b in path.as_os_str().as_bytes() {
-        if b.is_ascii_alphanumeric() || b"/-._~!$&'()*+,;=:@".contains(&b) {
+        if b.is_ascii_alphanumeric() || b"!$&'()*+,-./:=@_~".contains(&b) {
             url.push(b as char);
         } else {
             url.push_str(&format!("%{b:02X}"));
@@ -622,9 +601,7 @@ mod tests {
         let entry = |id: &str, cats: &str| {
             let path = dir.join(id);
             std::fs::write(&path, format!("[Desktop Entry]\nType=Application\nName={id}\nExec={id}\nCategories={cats}\n")).unwrap();
-            Entry { id: id.into(), name: id.into(), icon: None, exec: id.into(), try_exec: None, wm_class: String::new(),
-                    program: id.into(), kinds: Vec::new(), path, category: "system", keywords: Vec::new(),
-                    flatpak: None, appimage: None, terminal: false }
+            Entry { id: id.into(), name: id.into(), icon: None, exec: id.into(), kinds: Vec::new(), path, flatpak: None, appimage: None, terminal: false }
         };
         let all = vec![entry("aterm.desktop", "System;TerminalEmulator;"), entry("editor.desktop", "Utility;TextEditor;"),
                        entry("org.example.Zterm.desktop", "System;TerminalEmulator;")];
@@ -694,9 +671,7 @@ mod tests {
         for (src, _) in crate::common::source::trees() {
             rust_files(&src, &mut files);
         }
-        let entry = Entry { id: "org.x.Y.desktop".into(), name: "Y".into(), icon: Some("y".into()), exec: "y".into(), try_exec: None,
-            wm_class: String::new(), program: "y".into(), kinds: Vec::new(), path: PathBuf::new(), category: "", keywords: Vec::new(),
-            flatpak: None, appimage: None, terminal: false };
+        let entry = Entry { id: "org.x.Y.desktop".into(), name: "Y".into(), icon: Some("y".into()), exec: "y".into(), kinds: Vec::new(), path: PathBuf::new(), flatpak: None, appimage: None, terminal: false };
         assert_eq!(entry.icons().last().map(String::as_str), Some(generic_icon_for("org.x.Y", "Y").as_str()));
         assert_eq!(generic_icon_for("org.x.Y", "Why\tnot"), format!("{}?org.x.Y\tWhy not", generic_icon("org.x.Y")));
         for p in files {
@@ -724,8 +699,7 @@ mod tests {
         let desk = vec!["Trindle".to_string()];
         let read = |text: &str| entry_from("org.x.Y.desktop", Path::new("/x"), &file(text), &langs, &desk, |p| p == "there");
         let e = read("Name=Color\nName[en_GB]=Colour\nExec=env A=1 /usr/bin/Ycolour %U\nIcon=y\nStartupWMClass=YC").unwrap();
-        assert_eq!((e.name.as_str(), e.icon.as_deref(), e.program.as_str(), e.wm_class.as_str(), e.key()),
-                   ("Colour", Some("y"), "ycolour", "yc", "org.x.Y"));
+        assert_eq!((e.name.as_str(), e.icon.as_deref(), e.key()), ("Colour", Some("y"), "org.x.Y"));
         assert_eq!(e.icons(), ["trindle-app-org.x.Y".to_string(), "y".to_string(), generic_icon_for("org.x.Y", "Colour")]);
         let old = read("Name=Old\nExec=old\nIcon=application-x-executable-symbolic").unwrap();
         assert_eq!(old.icon, None, "a launcher that names one of the old stand-ins has no icon of its own");
@@ -737,6 +711,19 @@ mod tests {
         assert!(read("Name=A\nExec=a\nNotShowIn=Trindle;").is_none());
         assert!(read("Name=A\nExec=a\nTryExec=gone").is_none());
         assert!(on_path("/usr/bin/env") && !on_path("/usr/bin/trindle-test-not-there"));
+        assert_eq!(file_uri(Path::new("/home/user/a;b&c.txt")), "file:///home/user/a%3Bb&c.txt");
+        assert_eq!(bus_start("org.x.Y", "/org/x/Y", &["/home/user/a b.txt".into()])[6..], ["Open", "asa{sv}", "1", "file:///home/user/a%20b.txt", "0"]);
+        assert_eq!(bus_start("org.x.Y", "/org/x/Y", &[])[6..], ["Activate", "a{sv}", "0"]);
+        let dir = std::env::temp_dir().join(format!("trindle-apps-missing-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        for (exec, starts) in [("/usr/bin/trindle-test-not-there %f", false), ("env A=1 trindle-test-not-there %f", false)] {
+            let text = format!("[Desktop Entry]\nType=Application\nName=A\nExec={exec}\n");
+            let path = dir.join("a.desktop");
+            std::fs::write(&path, &text).unwrap();
+            let e = entry_from("a.desktop", &path, &KeyFile::parse(&text), &langs, &desk, |_| true).unwrap();
+            assert_eq!(launch_boxed(&e, &[]), starts, "{exec}");
+        }
+        let _ = std::fs::remove_dir_all(dir);
         assert!(read("Name=A\nExec=a\nTryExec=there").is_some());
         assert!(read("Name=A").is_none());
         assert!(entry_from("l.desktop", Path::new("/x"), &KeyFile::parse("[Desktop Entry]\nType=Link\nName=L\nExec=a"), &langs, &desk, |_| true).is_none());
@@ -774,17 +761,10 @@ mod tests {
     }
 
     #[test]
-    fn a_boxed_package_is_known_by_its_own_program() {
-        assert_eq!(program_from(None, "trindle-boxed alacritty alacritty --working-directory /tmp"), "alacritty");
-        assert_eq!(program_from(None, "env A=1 /usr/bin/gimp %U"), "gimp");
-    }
-
-    #[test]
     fn a_program_folders_starts_is_boxed_unless_it_already_is() {
         let app = |id: &str, exec: &str, flatpak: Option<&str>, appimage: bool, terminal: bool| Entry {
-            id: format!("{id}.desktop"), name: id.into(), icon: None, exec: exec.into(), try_exec: None,
-            wm_class: String::new(), program: program_from(flatpak, exec), kinds: Vec::new(),
-            path: PathBuf::new(), category: "utilities", keywords: Vec::new(), flatpak: flatpak.map(str::to_string),
+            id: format!("{id}.desktop"), name: id.into(), icon: None, exec: exec.into(), kinds: Vec::new(),
+            path: PathBuf::new(), flatpak: flatpak.map(str::to_string),
             appimage: appimage.then(|| "/home/john/.appimage/x.AppImage|1".to_string()), terminal,
         };
         let words = |w: &[&str]| w.iter().map(|s| s.to_string()).collect::<Vec<_>>();
@@ -801,8 +781,6 @@ mod tests {
         ] {
             assert!(loose_argv(&entry, &argv).is_none(), "{} was boxed twice or boxed when it is Trindle's", entry.id);
         }
-        assert_eq!(program_from(None, "trindle-boxed --appimage \"/home/john/.appimage/Krita-5-x86_64.AppImage\" %U"), "krita-5-x86_64.appimage");
-        assert_eq!(program_from(None, "trindle-boxed --loose gimp env A=1 /usr/bin/gimp %U"), "gimp");
     }
 
     #[test]

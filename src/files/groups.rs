@@ -1,4 +1,4 @@
-// Grouping what a folder holds under small headings: by kind, by when it was changed, or by size.
+//! Grouping what a folder holds under small headings: by kind, by when it
 
 use super::places::Entry;
 use crate::common::clock::Local;
@@ -165,7 +165,7 @@ mod tests {
         assert_eq!(at(NOON - 10 * DAY), "Earlier this month");
         assert_eq!(at(NOON - 13 * DAY), "Earlier this month");
         assert_eq!(at(NOON - 14 * DAY), "Earlier this year");
-        assert_eq!(at(NOON - 400 * DAY), "Long ago");
+        assert_eq!(at(NOON - 400 * DAY), "Older");
         let monday = Local::utc(NOON - 2 * DAY);
         assert_eq!(dates()[date_rank(Local::utc(NOON - 3 * DAY), monday)], "Yesterday");
         assert_eq!(dates()[date_rank(Local::utc(NOON - 4 * DAY), monday)], "Last week");
@@ -210,7 +210,7 @@ mod tests {
         assert_eq!(heads(&list, GroupBy::Kind), ["0+2 Folders, 2", "2+2 Documents, 2", "4+2 Pictures, 2"]);
         arrange(&mut list, GroupBy::Date, now);
         assert_eq!(names(&list), ["Albums", "Zoo", "bread.txt", "damson.txt", "apple.jpg", "cherry.png"]);
-        assert_eq!(heads(&list, GroupBy::Date), ["0+3 Today, 3", "3+2 Yesterday, 2", "5+1 Long ago, 1"]);
+        assert_eq!(heads(&list, GroupBy::Date), ["0+3 Today, 3", "3+2 Yesterday, 2", "5+1 Older, 1"]);
         arrange(&mut list, GroupBy::Size, now);
         assert_eq!(names(&list), ["Albums", "Zoo", "cherry.png", "damson.txt", "apple.jpg", "bread.txt"]);
         assert_eq!(heads(&list, GroupBy::Size), ["0+2 Folders, 2", "2+1 Large (over 100 MB), 1", "3+1 Medium (1 MB to 100 MB), 1", "4+1 Small (under 1 MB), 1", "5+1 Empty, 1"]);

@@ -1,4 +1,4 @@
-// 7z, listed, read and unpacked.
+//! 7z, listed, read and unpacked.
 
 use super::*;
 use super::sz_bytes::{SZ_COPY, SZ_LOCKED, SZ_LOCKEDHEAD, SZ_LZMA, SZ_LZMA2};

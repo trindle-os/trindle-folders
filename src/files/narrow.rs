@@ -1,4 +1,4 @@
-// The three plain choices beside Find's box: what kind of thing, how big, and when it was last changed.
+//! The three plain choices beside Find's box: what kind of thing, how big,
 
 use std::path::Path;
 use std::time::UNIX_EPOCH;

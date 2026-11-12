@@ -1,4 +1,4 @@
-// Archives opened like folders.
+//! Archives opened like folders: an archive of any kind is listed once on a
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -78,6 +78,20 @@ pub(super) fn open_dir(archive: &Path) -> PathBuf {
     base.join(name)
 }
 
+fn clear_old(into: &Path, names: &[String]) {
+    for n in names {
+        let last = n.rsplit('/').next().unwrap_or(n);
+        if !crate::common::files::is_one_name(last.as_bytes()) {
+            continue;
+        }
+        let old = into.join(last);
+        let _ = match std::fs::symlink_metadata(&old) {
+            Ok(m) if m.is_dir() => std::fs::remove_dir_all(&old),
+            _ => std::fs::remove_file(&old),
+        };
+    }
+}
+
 pub(super) fn forget_taken_out() {
     std::thread::spawn(|| forget_under(&taken_out_home()));
 }
@@ -90,16 +104,7 @@ fn forget_under(home: &Path) {
 
 impl Files {
     fn inside_off<T: Send + 'static>(&mut self, job: impl FnOnce() -> T + Send + 'static, done: impl FnOnce(T) -> InsideMsg + Send + 'static) {
-        match &self.post {
-            Some(post) => {
-                let post = post.clone();
-                let _ = std::thread::Builder::new().name("folders-inside".into()).spawn(move || post.send(Msg::Inside(done(job()))));
-            }
-            None => {
-                let m = done(job());
-                self.inside_msg(m);
-            }
-        }
+        self.off_thread("folders-inside", job, move |got| Msg::Inside(done(got)));
     }
 
     pub(super) fn inside_list(&mut self, t: usize, p: usize) {
@@ -181,10 +186,7 @@ impl Files {
         let sealed = key.is_some();
         self.inside_off(move || {
             std::fs::create_dir_all(&into).map_err(|e| e.to_string())?;
-            for n in &names {
-                let old = into.join(n.rsplit('/').next().unwrap_or(n));
-                let _ = if old.is_dir() { std::fs::remove_dir_all(&old) } else { std::fs::remove_file(&old) };
-            }
+            clear_old(&into, &names);
             let stop = AtomicBool::new(false);
             archive::take_out(&a, key.as_ref(), &names, &into, &stop, &|_, _| {}).map(|u| (u.made, u.refused.len())).map_err(|e| archive::why(&e))
         }, move |got| InsideMsg::Out { got, sealed });
@@ -262,6 +264,20 @@ mod tests {
     use crate::toolkit::ui::App;
 
     #[test]
+    fn an_entry_named_up_clears_nothing_outside_its_own_copies() {
+        let home = std::env::temp_dir().join(format!("trindle-files-inside-up-{}", std::process::id()));
+        let into = home.join("this.zip");
+        std::fs::create_dir_all(&into).unwrap();
+        std::fs::create_dir_all(home.join("other.zip")).unwrap();
+        std::fs::write(home.join("other.zip/open.txt"), b"open in an app").unwrap();
+        std::fs::write(into.join("old.txt"), b"old").unwrap();
+        clear_old(&into, &["..".into(), "a/..".into(), "old.txt".into()]);
+        assert!(home.join("other.zip/open.txt").exists(), "another archive's copy was removed");
+        assert!(!into.join("old.txt").exists());
+        let _ = std::fs::remove_dir_all(home);
+    }
+
+    #[test]
     fn a_zip_opens_like_a_folder() {
         let dir = std::env::temp_dir().join(format!("trindle-files-inside-test-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
@@ -299,7 +315,9 @@ mod tests {
         f.update(Msg::Preview(crate::files::preview::PreviewMsg::Toggle));
         let Some(crate::files::dialogs::Dialog::Preview(pv)) = &f.dialog else { panic!("no viewer") };
         assert!(matches!(&pv.seen, crate::files::preview::Seen::Text { blocks, .. } if blocks[0] == "hello"));
+        let copy = pv.copy().unwrap().to_path_buf();
         f.update(Msg::Preview(crate::files::preview::PreviewMsg::Toggle));
+        assert!(!copy.exists(), "what the viewer took out of an archive was left on the disk");
         f.cols[0].tabs[0].picked = vec![0];
         f.update(Msg::Trash);
         assert!(f.bin.as_ref().map(|b| b.files.read_dir().map(|d| d.count()).unwrap_or(0)).unwrap_or(0) == 0);
@@ -314,7 +332,7 @@ mod tests {
         f.update(Msg::Undo);
         assert!(!dir.join("out/docs").exists());
         f.drop_into(vec![zip.join("top.txt")], Where::Trash, crate::files::act::Way::Usual);
-        assert!(f.said.contains("only be taken out"), "{}", f.said);
+        assert!(f.said.contains("only take things out of an archive"), "{}", f.said);
 
         let _ = std::fs::remove_dir_all(open_dir(&zip).parent().unwrap());
         let _ = std::fs::remove_dir_all(dir);
@@ -354,12 +372,12 @@ mod tests {
         std::fs::write(&locked, include_bytes!("../../tests/fixtures/archives/rar5-locked.rar")).unwrap();
         let plan = work::Plan { kind: work::Kind::Other(work::Extra::Unpack(archive::Place::Folder)), items: vec![locked], to: dir.join("out"), key: None };
         let over = work::run(plan, &work::Ctl::default(), &|_| {});
-        assert_eq!(over.failed, ["locked.rar (it is a RAR locked with a password, which Folders cannot unlock; nothing is wrong with the file)"]);
+        assert_eq!(over.failed, ["locked.rar (it's a RAR file with a password Folders can't unlock, but the file itself isn't damaged)"]);
         assert!(over.undo.is_empty() && !dir.join("out/locked").exists());
         std::fs::write(dir.join("fake.rar"), b"not a rar").unwrap();
         let mut f = Files::new(vec![dir.join("fake.rar")]);
         f.load(0, 0);
-        assert!(f.bad && f.said == "fake.rar could not be read: it is not an archive Folders can open.", "{}", f.said);
+        assert!(f.bad && f.said == "Folders couldn't read fake.rar: it isn't a kind of archive Folders can open.", "{}", f.said);
 
         std::fs::write(dir.join("some.deb"), ar(&[("debian-binary", b"2.0\n")])).unwrap();
         assert!(!opens(&dir.join("some.deb")) && archive::Format::of(&dir.join("some.deb")).is_some());

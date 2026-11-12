@@ -1,4 +1,4 @@
-// The sign-in card, and what is said of a login that could not be kept.
+//! The sign-in card, and what is said of a login that could not be kept.
 
 use zeroize::Zeroizing;
 
@@ -24,9 +24,9 @@ fn problems_are_said_plainly() {
     f.smb_open(p, &Address::parse("smb://nas.invalid/Nothing").unwrap());
     assert!(f.dialog.is_some(), "a guest is asked to log in first");
     f.update(Msg::Share(ShareMsg::User("jo".into())));
-    f.update(Msg::Share(ShareMsg::Password("right".into())));
+    f.update(Msg::Share(ShareMsg::Password(String::from("right").into())));
     f.update(Msg::Share(ShareMsg::Go));
-    assert!(f.dialog.is_none() && f.bad && f.said.contains("no shared folder called Nothing"), "{}", f.said);
+    assert!(f.dialog.is_none() && f.bad && f.said.contains("doesn't have a shared folder called Nothing"), "{}", f.said);
     let mut g = Files::new(vec![std::env::temp_dir()]);
     g.smb_open(p, &Address::parse("smb://nas.invalid/Public").unwrap());
     assert!(g.dialog.is_none(), "{}", g.said);
@@ -45,7 +45,7 @@ fn the_card_asks_plainly_and_hides_the_password() {
     assert!(said.iter().any(|s| s == "NAS wants a user name and password."));
     assert!(said.iter().any(|s| s == "secret: Password"), "the password box shows dots: {said:?}");
     assert!(said.iter().any(|s| s == "switch: Remember for 90 days"));
-    assert!(said.iter().any(|s| s == "Starts again each time you use it."), "{said:?}");
+    assert!(said.iter().any(|s| s == "The 90 days start again each time you use it."), "{said:?}");
     assert_eq!(LAPSE, 90 * 24 * 60 * 60, "the switch says 90 days");
     assert!(said.iter().any(|s| s == "button: Open") && said.iter().any(|s| s == "button: Close"));
     assert!(!said.iter().any(|s| s.contains("hidden")));
@@ -74,7 +74,7 @@ fn a_keyring_that_cannot_say_is_said_in_red_on_the_card_and_never_as_no_login_ke
         assert_eq!(at(why), at(&a.why) + 1);
         assert!(!lines.iter().any(|l| l.to_lowercase().contains("no login kept")), "{lines:?}");
         g.update(Msg::Share(ShareMsg::User("jo".into())));
-        g.update(Msg::Share(ShareMsg::Password("right".into())));
+        g.update(Msg::Share(ShareMsg::Password(String::from("right").into())));
         g.update(Msg::Share(ShareMsg::Go));
         assert!(g.dialog.is_none(), "{why}: {}", g.said);
         pretend::keyring_cannot_say(None);
@@ -98,7 +98,7 @@ fn a_login_that_worked_and_could_not_be_kept_is_told_why() {
     let login = Login::typed("jo", "right");
     let at = Confirmed::made_up("10.0.0.2");
     assert_eq!(worked("nas.invalid", Some("Photos"), &login, Some(&at), Some(false), true), (Some(locked_words().to_string()), None));
-    assert!(unkept_words(locked_words()).contains("not kept") && unkept_words(locked_words()).contains(locked_words()));
+    assert!(unkept_words(locked_words()).contains("couldn't save the login") && unkept_words(locked_words()).contains(locked_words()));
     assert_eq!(worked("nas.invalid", Some("Photos"), &login, Some(&at), None, true), (None, None));
     pretend::keyring_cannot_say(None);
     assert_eq!(worked("nas.invalid", Some("Photos"), &login, Some(&at), Some(false), true), (None, None));
@@ -119,18 +119,18 @@ fn a_login_the_keyring_keeps_late_is_heard_of_and_told() {
         f.go(p, Where::Remote(if share { "smb://nas.invalid/Photos" } else { "smb://nas.invalid/" }.into()));
         assert!(matches!(&f.dialog, Some(Dialog::Share(_))), "no card: {}", f.said);
         f.update(Msg::Share(ShareMsg::User("jo".into())));
-        f.update(Msg::Share(ShareMsg::Password("right".into())));
+        f.update(Msg::Share(ShareMsg::Password(String::from("right").into())));
         pretend::keeps_late(how);
         f.update(Msg::Share(ShareMsg::Go));
         assert!(f.dialog.is_none(), "{}", f.said);
         (f.said.clone(), f.bad)
     };
     for share in [true, false] {
-        assert_eq!(open(Ok(()), share), ("The keyring answered late: the login is kept.".to_string(), false));
+        assert_eq!(open(Ok(()), share), ("After a delay, the login was saved in the keyring.".to_string(), false));
         assert_eq!(pretend::seen_at("nas.invalid"), ["10.0.0.2"], "kept after all");
         let refused = open(Err(locked_words().into()), share);
-        assert!(refused.1 && refused.0.starts_with("The keyring answered late and did not keep the login:") && refused.0.ends_with(locked_words()), "{refused:?}");
-        assert_eq!(open(Err(never_words().into()), share), ("The keyring never answered, so the login is not kept.".to_string(), true));
+        assert!(refused.1 && refused.0.starts_with("Folders couldn't save the login in the keyring.") && refused.0.ends_with(locked_words()), "{refused:?}");
+        assert_eq!(open(Err(never_words().into()), share), ("Folders gave up waiting for the keyring, so the login wasn't saved.".to_string(), true));
     }
     let _ = std::fs::remove_dir_all(pretend::folder("Photos"));
     let login = Login::typed("jo", "right");
@@ -142,7 +142,7 @@ fn a_login_the_keyring_keeps_late_is_heard_of_and_told() {
     assert_eq!(heard.wait(), Err(never_words().to_string()), "heard once");
     let mut f = Files::new(vec![std::env::temp_dir()]);
     f.update(Msg::Share(ShareMsg::KeptLate(Ok(()))));
-    assert_eq!((f.said.as_str(), f.bad), ("The keyring answered late: the login is kept.", false));
+    assert_eq!((f.said.as_str(), f.bad), ("After a delay, the login was saved in the keyring.", false));
 }
 
 #[test]
@@ -173,9 +173,9 @@ fn a_login_used_at_an_address_no_card_showed_waits_for_the_card_once_the_address
     assert!(a.held && a.heard && !a.failed && a.user.is_empty() && a.password.is_empty());
     assert_eq!(a.address.as_deref(), Some("10.0.0.9"));
     assert_eq!(a.why, unshown_words("nas.invalid", "10.0.0.9"));
-    assert!(a.why.contains("only heard on the network") && a.why.contains("has not been sent") && !a.why.contains("a different address") && !a.why.contains('\u{2014}'), "{}", a.why);
+    assert!(a.why.contains("found it on the local network") && a.why.contains("hasn't sent your login") && !a.why.contains("a different address") && !a.why.contains('\u{2014}'), "{}", a.why);
     f.update(Msg::Share(ShareMsg::User("jo".into())));
-    f.update(Msg::Share(ShareMsg::Password("right".into())));
+    f.update(Msg::Share(ShareMsg::Password(String::from("right").into())));
     f.update(Msg::Share(ShareMsg::Remember(false)));
     f.update(Msg::Share(ShareMsg::Go));
     assert!(f.dialog.is_none(), "{}", f.said);

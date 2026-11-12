@@ -1,10 +1,10 @@
-// The Secret Service, asked over D-Bus as any program asks it, with a plain session, as the keyring lives on this computer's own bus.
+//! The Secret Service, asked over D-Bus as any program asks it, with a plain session, as the keyring lives on this computer's own bus.
 
 use std::collections::HashMap;
 
 use zbus::blocking::Connection;
 use zbus::zvariant::{OwnedObjectPath, OwnedValue, Value};
-use zeroize::Zeroizing;
+use zeroize::{Zeroize, Zeroizing};
 
 use crate::common::keyring_said::{why, locked_words};
 use crate::common::smb::Login;
@@ -144,8 +144,10 @@ pub fn all(c: &Connection, now: u64) -> Result<Vec<KeptRow>, String> {
 }
 
 pub fn forget(c: &Connection, server: &str) -> Result<(), String> {
-    let lower = server.to_lowercase();
-    let asks = [HashMap::from([("protocol".to_string(), "smb".to_string()), ("server".to_string(), lower)]), seen_attributes(server)];
+    let mut asks = vec![HashMap::from([("protocol".to_string(), "smb".to_string()), ("server".to_string(), server.to_lowercase())]), seen_attributes(server)];
+    if server != server.to_lowercase() {
+        asks.push(HashMap::from([("protocol".to_string(), "smb".to_string()), ("server".to_string(), server.to_string())]));
+    }
     for ask in &asks {
         let (open, locked) = call(c, ROOT, SERVICE, "SearchItems", &(ask,)).map_err(why)?
             .body().deserialize::<(Vec<OwnedObjectPath>, Vec<OwnedObjectPath>)>().map_err(|e| e.to_string())?;
@@ -212,7 +214,7 @@ fn read(c: &Connection, item: &OwnedObjectPath, s: &OwnedObjectPath) -> Option<L
     let attrs: OwnedValue = call(c, item.as_str(), "org.freedesktop.DBus.Properties", "Get", &(ITEM, "Attributes"))
         .ok()?.body().deserialize().ok()?;
     let attrs = HashMap::<String, String>::try_from(attrs).ok()?;
-    let password = Zeroizing::new(String::from_utf8(got.2).ok()?);
+    let password = Zeroizing::new(String::from_utf8(got.2).map_err(|e| e.into_bytes().zeroize()).ok()?);
     let user = attrs.get("user").filter(|u| !u.is_empty())?.clone();
     Some(Login { user, domain: attrs.get("domain").cloned().unwrap_or_default(), password })
 }
@@ -224,8 +226,9 @@ pub fn keep(c: &Connection, server: &str, share: Option<&str>, login: &Login) ->
         ("org.freedesktop.Secret.Item.Label".to_string(), Value::from(t!("folders-shares-password-label", user = &login.user, what = &what))),
         ("org.freedesktop.Secret.Item.Attributes".to_string(), Value::from(attributes(server, share, login))),
     ]);
-    let secret: Secret = (s.clone(), Vec::new(), login.password.as_bytes().to_vec(), "text/plain".into());
-    let made = call(c, DEFAULT, COLLECTION, "CreateItem", &(props, secret, true));
+    let mut secret: Secret = (s.clone(), Vec::new(), login.password.as_bytes().to_vec(), "text/plain".into());
+    let made = call(c, DEFAULT, COLLECTION, "CreateItem", &(props, &secret, true));
+    secret.2.zeroize();
     close(c, &s);
     let (_, prompt): (OwnedObjectPath, OwnedObjectPath) = made.map_err(why)?.body().deserialize().map_err(|e| e.to_string())?;
     if prompt.as_str() != "/" {

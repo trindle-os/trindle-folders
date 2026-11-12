@@ -1,8 +1,7 @@
-// Small pictures of files, kept in the freedesktop thumbnail cache.
+//! Small pictures of files, kept in the freedesktop thumbnail cache: a PNG named by the MD5 of the file's URI, carrying Thumb::URI and Thumb::MTime, so other programs' thumbnails are used and ours are used by them.
 
 use std::fs::{self, DirBuilder, OpenOptions};
 use std::io::{self, Read, Write};
-use std::os::unix::ffi::OsStrExt;
 use std::os::unix::fs::{DirBuilderExt, MetadataExt, OpenOptionsExt};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicBool;
@@ -52,15 +51,7 @@ pub fn uri(path: &Path) -> String {
     } else {
         std::env::current_dir().map(|d| d.join(path)).unwrap_or_else(|_| path.to_path_buf())
     };
-    let mut out = String::from("file://");
-    for &b in whole.as_os_str().as_bytes() {
-        if b.is_ascii_alphanumeric() || b"!$&'()*+,-./:=@_~".contains(&b) {
-            out.push(b as char);
-        } else {
-            out.push_str(&format!("%{b:02X}"));
-        }
-    }
-    out
+    crate::common::apps::file_uri(&whole)
 }
 
 pub fn can_thumb(path: &Path) -> bool {

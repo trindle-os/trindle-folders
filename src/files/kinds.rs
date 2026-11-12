@@ -1,4 +1,4 @@
-// What Files and the file chooser both need.
+//! What Files and the file chooser both need: media types and their icons,
 
 use std::collections::HashMap;
 use std::ffi::CString;

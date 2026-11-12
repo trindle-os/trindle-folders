@@ -1,4 +1,4 @@
-// Pictures of getting about and of the windows beside the list.
+//! Pictures of getting about and of the windows beside the list: tabs, Find,
 
 use std::path::{Path, PathBuf};
 
@@ -501,11 +501,11 @@ fn shoot_layout() {
     f.room = size();
     f.home = dir.clone();
     f.update(Msg::PanesAre(false));
-    std::fs::create_dir_all(papers.join("Backup-Sync")).unwrap();
+    std::fs::create_dir_all(papers.join("Shared-Notes")).unwrap();
     for (file, bytes) in [("beach.txt", 1_800), ("sandcastle.txt", 640), ("picnic list.txt", 320), ("tide times.ods", 12_000)] {
         std::fs::write(papers.join("Albums/2025/Summer").join(file), vec![b'x'; bytes]).unwrap();
     }
-    f.pinned = vec![papers.join("Backup-Sync"), papers.join("Letters"), papers.join("Recipes")];
+    f.pinned = vec![papers.join("Shared-Notes"), papers.join("Letters"), papers.join("Recipes")];
     f.pins_file = Some(dir.join("pins"));
     one_row_at_the_top(&mut f, &name, &papers);
     a_pinned_folder_under_a_name_of_its_own(&mut f, &name, &papers);
@@ -558,7 +558,7 @@ fn a_pinned_folder_under_a_name_of_its_own(f: &mut Files, name: &str, papers: &P
     f.update(Msg::Menu(MenuMsg::Side { pinned: true, row: 0, x: 60.0, y: 250.0 }));
     shoot(&format!("{name}-pin-menu"), f);
     f.menu = None;
-    f.pin_rename_start(papers.join("Backup-Sync"));
+    f.pin_rename_start(papers.join("Shared-Notes"));
     shoot(&format!("{name}-pin-typing"), f);
     f.update(Msg::PinNameText("C-sync".into()));
     f.update(Msg::PinNameDone);

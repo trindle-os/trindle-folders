@@ -1,4 +1,4 @@
-// Tests for renaming in place.
+//! Tests for renaming in place.
 
 mod bench;
 mod endings;

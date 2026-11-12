@@ -1,4 +1,4 @@
-// Pinned folders: let go in the sidebar, put in another order, and shown under names of their own.
+//! Pinned folders: let go in the sidebar, put in another order, and shown under names of their own.
 
 use crate::files::menu::{Act, MenuMsg};
 use crate::toolkit::popup::PopupMsg;
@@ -115,15 +115,15 @@ fn pick_from_pinned_menu(f: &mut Files, row: usize, act: Act) {
 #[test]
 fn a_pinned_folder_can_be_shown_under_a_name_of_its_own() {
     let (dir, mut f) = two_panes("pin-names");
-    for d in ["Backup-Sync", "Work"] {
+    for d in ["Shared-Notes", "Work"] {
         std::fs::create_dir_all(dir.join(d)).unwrap();
     }
     let kept = dir.join("pins-kept");
     let names = places::names_beside(&kept);
     f.pins_file = Some(kept.clone());
-    f.pinned = vec![dir.join("Backup-Sync"), dir.join("Work")];
+    f.pinned = vec![dir.join("Shared-Notes"), dir.join("Work")];
     f.save_pins();
-    let sync = dir.join("Backup-Sync");
+    let sync = dir.join("Shared-Notes");
     let acts = |f: &mut Files, pinned: bool, row: usize| {
         f.update(Msg::Menu(MenuMsg::Side { pinned, row, x: 100.0, y: 140.0 }));
         f.menu.as_ref().map(|m| m.lines.iter().map(|l| l.act).collect::<Vec<_>>()).unwrap_or_default()
@@ -135,7 +135,7 @@ fn a_pinned_folder_can_be_shown_under_a_name_of_its_own() {
     assert!(acts(&mut f, true, 0).contains(&Act::RenamePin));
     let at = acts(&mut f, true, 0).iter().position(|a| *a == Act::RenamePin).unwrap();
     f.update(Msg::Menu(MenuMsg::Pop(PopupMsg::Pick(at))));
-    assert_eq!(f.pin_rename, Some((sync.clone(), "Backup-Sync".to_string())), "the box opens on the name shown");
+    assert_eq!(f.pin_rename, Some((sync.clone(), "Shared-Notes".to_string())), "the box opens on the name shown");
     f.update(Msg::PinNameText("nothing".into()));
     f.update(Msg::PinNameStop);
     assert!(f.pin_rename.is_none() && f.pin_names.is_empty() && !names.exists());
@@ -151,11 +151,11 @@ fn a_pinned_folder_can_be_shown_under_a_name_of_its_own() {
     assert_eq!(f.cols[0].tabs.iter().chain(f.cols[1].tabs.iter()).filter(|t| t.at == Where::Folder(sync.clone())).count(), 0);
     assert_eq!(places::read_names(&names).get(&sync).map(String::as_str), Some("C-sync"));
     f.go(0, Where::Folder(sync.clone()));
-    assert_eq!(f.tab_name(&f.cols[0].at.clone()), "Backup-Sync", "the tab keeps the real name");
+    assert_eq!(f.tab_name(&f.cols[0].at.clone()), "Shared-Notes", "the tab keeps the real name");
     f.pin_rename_start(sync.clone());
     f.update(Msg::PinNameText("  ".into()));
     f.update(Msg::PinNameDone);
-    assert_eq!(f.pin_name(&sync), "Backup-Sync");
+    assert_eq!(f.pin_name(&sync), "Shared-Notes");
     assert!(places::read_names(&names).is_empty());
     assert!(acts(&mut f, true, 0).contains(&Act::RenamePin));
     f.pin_rename_start(sync.clone());
@@ -165,6 +165,6 @@ fn a_pinned_folder_can_be_shown_under_a_name_of_its_own() {
     f.toggle_pin(sync.clone());
     assert!(f.pin_names.is_empty() && places::read_names(&names).is_empty());
     f.toggle_pin(sync.clone());
-    assert_eq!(f.pin_name(&sync), "Backup-Sync", "pinned again, it has its own name");
+    assert_eq!(f.pin_name(&sync), "Shared-Notes", "pinned again, it has its own name");
     let _ = std::fs::remove_dir_all(dir);
 }

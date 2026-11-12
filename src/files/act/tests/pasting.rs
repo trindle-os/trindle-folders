@@ -1,4 +1,4 @@
-// Cut, copy and paste, in Folders and from other programs.
+//! Cut, copy and paste, in Folders and from other programs.
 
 use std::fs;
 use std::path::{Path, PathBuf};

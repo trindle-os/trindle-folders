@@ -1,4 +1,4 @@
-// Typing a place in a pane's own line.
+//! Typing a place in a pane's own line.
 
 use crate::toolkit::theme::Theme;
 

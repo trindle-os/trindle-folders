@@ -1,4 +1,4 @@
-// Zip, unlocked: its first lock (ZipCrypto) and WinZip's AES.
+//! Zip, unlocked: its first lock (ZipCrypto) and WinZip's AES.
 
 use std::io::{self, Read};
 

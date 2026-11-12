@@ -1,4 +1,4 @@
-// What Files does with each message: the routing to the topic that answers it, and the rules that hold after every one.
+//! What Files does with each message: the routing to the topic that answers it, and the rules that hold after every one.
 
 use std::path::PathBuf;
 

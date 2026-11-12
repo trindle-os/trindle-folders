@@ -1,4 +1,4 @@
-// What the window knows of shares: those mounted and remembered, pins in them, and putting them back.
+//! What the window knows of shares: those mounted and remembered, pins in them, and putting them back.
 
 use std::path::Path;
 

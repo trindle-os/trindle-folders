@@ -1,21 +1,29 @@
 
+# machine translated (Russian), not yet reviewed by a person.
 
-folders-neighbours-looking = Идёт поиск компьютеров в этой сети, которые открывают доступ к папкам.
+# Line on the empty Network page while Folders is still looking for computers.
+folders-neighbours-looking = Идёт поиск компьютеров в этой сети, которые открывают доступ к папкам…
 
+# First line on the empty Network page when nothing was found.
 folders-neighbours-none = В этой сети не найдено компьютеров с общими папками.
 
+# Line on the empty Network page saying which ways of looking were used; the variable is both, windows or other.
 folders-neighbours-asked =
     { $ways ->
-        [both] Folders спросил способом Windows и способом, на который отвечают NAS, Mac и Linux.
-        [windows] Folders спросил способом Windows.
-       *[other] Folders спросил способом, на который отвечают NAS, Mac и Linux.
+        [both] Folders искал компьютеры Windows, а также NAS, Mac и компьютеры Linux.
+        [windows] Folders искал компьютеры Windows.
+       *[other] Folders искал NAS, Mac и компьютеры Linux.
     }
 
-folders-neighbours-no-finder = Способом Windows спросить не удалось: на этом компьютере нет поискового средства Trindle для него (trindle-wsdd).
+# Line on the empty Network page saying the Windows way could not be asked because Trindle's finder program is missing.
+folders-neighbours-no-finder = Folders не смог искать компьютеры Windows, потому что trindle-wsdd не установлен.
 
-folders-neighbours-no-card = Нет подключённой сетевой карты, через которую можно спрашивать; один лишь VPN такие вопросы не передаёт.
+# Line on the empty Network page saying the other way could not be asked because no network card is connected.
+folders-neighbours-no-card = Folders не смог искать NAS, Mac и компьютеры Linux, потому что этот компьютер не подключён к сети. Одного VPN недостаточно.
 
-folders-neighbours-refused = Сеть не приняла вопрос ({ $why }).
+# Line on the empty Network page saying the network refused the question; the variable is the reason the system gave.
+folders-neighbours-refused = Folders не смог искать NAS, Mac и компьютеры Linux ({ $why }).
 
-folders-neighbours-quiet = Компьютер, который молчит или стоит за брандмауэром, всё равно можно открыть по имени или адресу.
+# Last line on the empty Network page: a quiet computer can still be opened by hand.
+folders-neighbours-quiet = Если компьютер не появился в списке или стоит за брандмауэром, его всё равно можно открыть по имени или адресу.
 

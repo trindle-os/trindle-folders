@@ -1,4 +1,4 @@
-// What Files does to files: copying, moving, the Trash, deleting for good, renaming and making new ones.
+//! What Files does to files: copying, moving, the Trash, deleting for
 
 use crate::toolkit::t;
 
@@ -8,6 +8,7 @@ mod jobs;
 mod msg;
 mod steps;
 mod text;
+pub(in crate::files) use text::names;
 #[cfg(test)]
 mod tests;
 mod types;

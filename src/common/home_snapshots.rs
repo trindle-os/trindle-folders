@@ -1,4 +1,4 @@
-// Reading the snapshots of the home folder, so that an earlier version of a file can be opened.
+//! Reading the snapshots of the home folder, so that an earlier version of
 
 use std::path::{Path, PathBuf};
 

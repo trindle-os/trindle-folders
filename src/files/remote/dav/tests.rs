@@ -1,4 +1,4 @@
-// Tests of the WebDAV link: its listings and a made-up server.
+//! Tests of the WebDAV link: its listings and a made-up server.
 
 use super::*;
 use std::collections::BTreeMap;
@@ -147,6 +147,10 @@ fn answer(mut conn: TcpStream, store: &Held, digest: bool) {
             *want != tag(&files, if files.contains_key(&folder) { &folder } else { &target })
         }) => send(&mut conn, "412 Precondition Failed", "", b""),
         "GET" => match files.get(&target) {
+            Some(d) if target.contains("unsized") => {
+                let _ = write!(conn, "HTTP/1.1 200 OK\r\n\r\n");
+                let _ = conn.write_all(&d[..d.len() / 2]);
+            }
             Some(d) => send(&mut conn, "200 OK", "", d),
             None => send(&mut conn, "404 Not Found", "", b""),
         },
@@ -231,7 +235,7 @@ fn open(port: u16, password: Option<&str>) -> Result<Dav, Error> {
     use crate::files::leave;
     let address = Address::parse(&format!("dav://jo@127.0.0.1:{port}/dav/")).unwrap();
     let to = leave::Reached::now(&address.host, None).map_or(leave::Way::Nowhere, leave::Way::At);
-    let to = leave::leave(Login { password: password.map(str::to_string), ..Login::default() }, &to).expect("an address that was typed is given");
+    let to = leave::leave(Login { password: password.map(|p| String::from(p).into()), ..Login::default() }, &to).expect("an address that was typed is given");
     Dav::connect(&address, &to)
 }
 
@@ -241,7 +245,7 @@ fn a_link_goes_to_the_one_address_it_was_cleared_for() {
     let (port, _files) = server(false);
     let shown = leave::Way::At(leave::Confirmed::made_up("127.0.0.1").reached());
     let address = Address::parse(&format!("dav://jo:secret@no-such-name.invalid:{port}/dav/")).unwrap();
-    let to = leave::leave(Login { password: Some("secret".into()), ..Login::default() }, &shown).expect("shown on the card");
+    let to = leave::leave(Login { password: Some(String::from("secret").into()), ..Login::default() }, &shown).expect("shown on the card");
     let mut dav = Dav::connect(&address, &to).expect("the address shown was not the one written to");
     assert_eq!(dav.list("/dav/").unwrap().len(), 2);
     let mut got = Vec::new();
@@ -265,7 +269,7 @@ fn a_webdav_folder_is_listed_read_written_and_renamed() {
         assert_eq!(dav.read("/dav/a.txt", &mut got, &mut |_| true).unwrap(), 5);
         assert_eq!(got, b"hello");
         let words = b"made by Folders";
-        dav.write("/dav/sub/new note.txt", &mut &words[..], words.len() as u64, &mut |_| true).unwrap();
+        dav.write_new("/dav/sub/new note.txt", &mut &words[..], words.len() as u64, &mut |_| true).unwrap();
         assert_eq!(files.lock().unwrap().get("/dav/sub/new note.txt").map(Vec::as_slice), Some(&words[..]));
         assert_eq!(dav.stat("/dav/sub/new note.txt").unwrap().size, words.len() as u64);
         dav.rename("/dav/a.txt", "/dav/b.txt").unwrap();
@@ -284,17 +288,31 @@ fn a_webdav_folder_is_listed_read_written_and_renamed() {
 }
 
 #[test]
+fn a_webdav_file_with_no_length_is_never_taken_as_whole() {
+    let (port, _files) = server(false);
+    let mut dav = open(port, Some("secret")).unwrap();
+    let words = b"the whole of it";
+    dav.write_new("/dav/unsized.txt", &mut &words[..], words.len() as u64, &mut |_| true).unwrap();
+    let mut got = Vec::new();
+    assert!(dav.read("/dav/unsized.txt", &mut got, &mut |_| true).is_err(), "a cut-short file was taken as whole: {got:?}");
+}
+
+#[test]
 fn a_webdav_folder_with_anything_in_it_is_never_removed() {
     let (port, files) = server(false);
     let mut dav = open(port, Some("secret")).unwrap();
     let words = b"still wanted";
-    dav.write("/dav/sub/kept.txt", &mut &words[..], words.len() as u64, &mut |_| true).unwrap();
+    dav.write_new("/dav/sub/kept.txt", &mut &words[..], words.len() as u64, &mut |_| true).unwrap();
     let got = dav.rmdir("/dav/sub");
     assert!(files.lock().unwrap().contains_key("/dav/sub/kept.txt"), "a folder was removed with a file still in it");
     assert!(matches!(&got, Err(Error::Failed(why)) if why == "sub is not empty."), "{got:?}");
     dav.remove("/dav/sub/kept.txt").unwrap();
     dav.rmdir("/dav/sub").unwrap();
     assert!(!files.lock().unwrap().contains_key("/dav/sub/"));
+    dav.mkdir("/dav/sub").unwrap();
+    dav.write_new("/dav/sub/kept.txt", &mut &words[..], words.len() as u64, &mut |_| true).unwrap();
+    assert!(dav.remove("/dav/sub").is_err());
+    assert!(files.lock().unwrap().contains_key("/dav/sub/kept.txt"), "a folder was removed as if it were a file");
 }
 
 #[test]
@@ -321,7 +339,7 @@ fn what_changes_on_a_webdav_server_in_the_moment_before_a_removal_is_not_removed
     files.lock().unwrap().insert("/dav/busy/".into(), Vec::new());
     let got = dav.rmdir("/dav/busy");
     assert_eq!(held("/dav/busy/late.txt").as_deref(), Some(&b"put there meanwhile"[..]), "what was put in the folder after it was looked at went with it");
-    assert!(matches!(&got, Err(Error::Failed(why)) if why == "busy (left alone: it changed just before removal)"), "{got:?}");
+    assert!(matches!(&got, Err(Error::Failed(why)) if why == "busy (not removed because it had just changed)"), "{got:?}");
     files.lock().unwrap().insert("/dav/busy.txt".into(), b"the one that was moved".to_vec());
     let got = dav.remove_if("/dav/busy.txt", 22, None);
     assert_eq!(held("/dav/busy.txt").as_deref(), Some(&b"saved again meanwhile"[..]), "a file saved again after it was looked at was removed");

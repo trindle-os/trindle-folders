@@ -1,4 +1,4 @@
-// Tests of Files' side of Windows and Samba shares.
+//! Tests of Files' side of Windows and Samba shares.
 
 use crate::files::app::{Files, Msg};
 use crate::common::smb::Login;
@@ -25,10 +25,9 @@ fn names(f: &Files, p: usize) -> Vec<String> {
     f.cols[p].entries.iter().map(|e| e.name.clone()).collect()
 }
 
-#[allow(clippy::too_many_arguments)]
-fn rule(server: &str, address: Option<&str>, trust: Trust, typed: Option<Login>, used: Option<Used>,
+fn rule(address: Option<&str>, trust: Trust, typed: Option<Login>, used: Option<Used>,
         kept: impl FnOnce() -> Option<Login>, seen: impl FnOnce(&Login) -> Vec<(String, u64)>, now: u64) -> Sends {
-    choose(server, address, trust, typed, used, kept, seen, now).0
+    choose(address, trust, typed, used, kept, seen, now).0
 }
 
 fn keyed(node: &Node<Msg>, key: &str) -> Option<(String, bool)> {

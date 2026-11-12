@@ -1,4 +1,4 @@
-// Folders as the window another program chooses files in: `trindle-folders --choose`, started by Trindle's portal.
+//! Folders as the window another program chooses files in: `trindle-folders --choose`, started by Trindle's portal.
 
 use std::collections::HashSet;
 use std::io::{Read, Write};
@@ -82,6 +82,7 @@ enum Said {
     Taken(PathBuf),
     NoName,
     Slash,
+    Silent,
 }
 
 pub struct Choosing {
@@ -153,16 +154,23 @@ fn taken(path: &Path) -> bool {
     super::reach::within(path, move || std::fs::symlink_metadata(&p).is_ok()).unwrap_or(true)
 }
 
-fn free(into: &Path, name: &str, given: &HashSet<PathBuf>) -> PathBuf {
-    let first = into.join(name);
-    if !given.contains(&first) && !taken(&first) {
-        return first;
-    }
+fn free(into: &Path, name: &str, given: &HashSet<PathBuf>) -> Option<PathBuf> {
     let (stem, ending) = match name.rfind('.').filter(|&i| i > 0) {
         Some(i) => name.split_at(i),
         None => (name, ""),
     };
-    (2..).map(|n| into.join(format!("{stem} ({n}){ending}"))).find(|p| !given.contains(p) && !taken(p)).unwrap_or(first)
+    for n in 1u32.. {
+        let p = if n == 1 { into.join(name) } else { into.join(format!("{stem} ({n}){ending}")) };
+        if given.contains(&p) {
+            continue;
+        }
+        let q = p.clone();
+        match super::reach::within(&p, move || std::fs::symlink_metadata(&q).is_ok())? {
+            false => return Some(p),
+            true => continue,
+        }
+    }
+    None
 }
 
 fn own_folder(at: &Where) -> Option<&Path> {
@@ -324,7 +332,11 @@ impl Files {
                 let Some(into) = (if folders.len() == 1 { Some(folders[0].clone()) } else { here }) else { return };
                 let mut given = HashSet::new();
                 for name in names.iter().filter_map(|n| plain_name(n)) {
-                    given.insert(free(&into, &name, &given));
+                    let Some(p) = free(&into, &name, &given) else {
+                        c.said = Some(Said::Silent);
+                        return;
+                    };
+                    given.insert(p);
                 }
                 let mut v: Vec<PathBuf> = given.into_iter().collect();
                 v.sort();
@@ -400,6 +412,7 @@ pub fn bar(f: &Files) -> Option<Node<Msg>> {
         Some(Said::Taken(p)) => label(t!("folders-choose-taken", name = &p.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default())),
         Some(Said::NoName) => label(t!("folders-choose-no-name")).tone(Tone::Problem),
         Some(Said::Slash) => label(t!("folders-choose-slash")).tone(Tone::Problem),
+        Some(Said::Silent) => label(super::reach::not_answering()),
         None => space(),
     };
     Some(column(vec![row(parts).gap(GAP).width(Length::Fill), said.height(Length::Fixed(SAID_H))]).gap(GAP / 2.0).width(Length::Fill))
@@ -438,11 +451,18 @@ mod tests {
         std::fs::write(dir.join("a.txt"), b"made up").unwrap();
         std::os::unix::fs::symlink(dir.join("nowhere"), dir.join("link.txt")).unwrap();
         let mut given = HashSet::new();
-        assert_eq!(free(&dir, "a.txt", &given), dir.join("a (2).txt"));
-        assert_eq!(free(&dir, "link.txt", &given), dir.join("link (2).txt"), "a link that leads nowhere is still taken");
+        assert_eq!(free(&dir, "a.txt", &given), Some(dir.join("a (2).txt")));
+        assert_eq!(free(&dir, "link.txt", &given), Some(dir.join("link (2).txt")), "a link that leads nowhere is still taken");
         given.insert(dir.join("b"));
-        assert_eq!(free(&dir, "b", &given), dir.join("b (2)"));
-        assert_eq!(free(&dir, ".hidden", &given), dir.join(".hidden"));
+        assert_eq!(free(&dir, "b", &given), Some(dir.join("b (2)")));
+        assert_eq!(free(&dir, ".hidden", &given), Some(dir.join(".hidden")));
+        super::super::reach::never(&dir, true);
+        let d = dir.clone();
+        let (send, hear) = std::sync::mpsc::channel();
+        std::thread::spawn(move || send.send(free(&d, "c.txt", &HashSet::new())));
+        let got = hear.recv_timeout(std::time::Duration::from_secs(10));
+        super::super::reach::never(&dir, false);
+        assert_eq!(got, Ok(None), "the search for a free name did not end");
         let _ = std::fs::remove_dir_all(&dir);
     }
 
@@ -595,7 +615,7 @@ mod tests {
     }
 
     #[test]
-    fn an_answered_chooser_is_an_ordinary_window_that_ends_with_the_work_it_leaves_going() {
+    fn an_answered_chooser_is_an_ordinary_window_that_stays_while_the_work_it_leaves_goes_on() {
         use super::super::{on_close, Next};
         let dir = made_up("over");
         for cancel in [false, true] {
@@ -609,7 +629,7 @@ mod tests {
             assert_eq!(f.jobs.len(), 1, "answering stops no work");
             f.choose_closed();
             assert_eq!(told.borrow().len(), 1);
-            assert_eq!(on_close(f.busy()), Next::Hide, "the copy goes on out of sight, and the window ends with it");
+            assert_eq!(on_close(f.busy()), Next::Stay, "the window stays while the copy goes on, and ends with it");
             f.jobs.clear();
             assert_eq!(on_close(f.busy()), Next::Quit, "with no work it ends at once");
         }

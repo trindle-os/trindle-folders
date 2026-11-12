@@ -1,4 +1,4 @@
-// A very big folder stays quick under every act a hand does in it.
+//! A very big folder stays quick under every act a hand does in it.
 
 use std::time::{Duration, Instant};
 

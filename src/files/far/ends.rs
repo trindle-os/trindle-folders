@@ -1,4 +1,4 @@
-// The two kinds of end a thing can be at, and what is known of a thing found there.
+//! The two kinds of end a thing can be at, and what is known of a thing found there.
 
 use std::collections::HashSet;
 use std::fs::{self, File};
@@ -58,7 +58,7 @@ pub(super) fn root_of(e: &End) -> Option<String> {
     }
 }
 
-pub(super) fn missing(e: &Error) -> bool {
+pub(in crate::files) fn missing(e: &Error) -> bool {
     match e {
         Error::NotFound(_) => true,
         Error::Io(e) => e.kind() == io::ErrorKind::NotFound,

@@ -1,4 +1,4 @@
-// The ring's favourites: the apps round its middle, and the folders and files pinned there beside them.
+//! The ring's favourites: the apps round its middle and the folders and files pinned beside them, kept one per line in a text file.
 
 #[cfg(test)]
 use super::apps::Entry;
@@ -130,8 +130,7 @@ pub fn unpin_app(file: &Path, id: &str) -> std::io::Result<bool> {
 pub fn path_entry(path: &Path, icon: Option<String>) -> Entry {
     let name = path.file_name().map_or_else(|| path.to_string_lossy().into_owned(), |n| n.to_string_lossy().into_owned());
     Entry {
-        id: path.to_string_lossy().into_owned(), name, icon, exec: String::new(), try_exec: None, wm_class: String::new(),
-        program: String::new(), kinds: Vec::new(), path: path.to_path_buf(), category: "", keywords: Vec::new(),
+        id: path.to_string_lossy().into_owned(), name, icon, exec: String::new(), kinds: Vec::new(), path: path.to_path_buf(),
         flatpak: None, appimage: None, terminal: false,
     }
 }
@@ -210,7 +209,7 @@ mod tests {
     #[test]
     fn a_path_shows_in_the_ring_under_its_name_and_in_no_piece_of_all_apps() {
         let e = path_entry(Path::new("/home/john/Photos"), Some("folder-symbolic".into()));
-        assert_eq!((e.name.as_str(), e.id.as_str(), e.category), ("Photos", "/home/john/Photos", ""));
+        assert_eq!((e.name.as_str(), e.id.as_str()), ("Photos", "/home/john/Photos"));
         assert!(is_path(&e.id) && e.exec.is_empty());
         assert!(e.icons().contains(&"folder-symbolic".to_string()));
     }

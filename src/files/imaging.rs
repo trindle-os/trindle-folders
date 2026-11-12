@@ -1,7 +1,7 @@
-// Turning and resizing pictures from the right-click menu, with the image crate.
+//! Turning and resizing pictures from the right-click menu.
 
 use std::fs::OpenOptions;
-use std::io::{self, BufWriter};
+use std::io::{self, BufWriter, Write};
 use std::os::unix::fs::{MetadataExt, OpenOptionsExt};
 use std::path::{Path, PathBuf};
 
@@ -62,15 +62,30 @@ pub fn turn(path: &Path, turn: Turn) -> io::Result<()> {
     if !turnable(path) {
         return Err(io::Error::new(io::ErrorKind::Unsupported, t!("folders-imaging-no-turn")));
     }
+    if std::fs::symlink_metadata(path)?.file_type().is_symlink() {
+        return Err(io::Error::new(io::ErrorKind::Unsupported, t!("folders-imaging-no-turn-link")));
+    }
+    let format = format_of(path)?;
+    let old = crate::common::files::read_file(path)?;
+    if moving(&old) {
+        return Err(io::Error::new(io::ErrorKind::Unsupported, t!("folders-imaging-no-turn-moving")));
+    }
     let img = load(path)?;
     let img = match turn {
         Turn::Left => img.rotate270(),
         Turn::Right => img.rotate90(),
         Turn::Over => img.rotate180(),
     };
+    let mut new = Vec::new();
+    img.write_to(&mut io::Cursor::new(&mut new), format).map_err(io::Error::other)?;
+    let new = match format {
+        ImageFormat::Png => png_carry(&old, new, turn != Turn::Over),
+        ImageFormat::WebP => webp_carry(&old, new, (img.width(), img.height()), img.color().has_alpha()),
+        _ => new,
+    };
     let own = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.subsec_nanos());
     let side = path.with_file_name(format!(".{}.{}-{own}.turning", super::work::name_of(path), std::process::id()));
-    save(&img, &side, format_of(path)?, std::fs::metadata(path)?.mode())?;
+    made_new(&side, std::fs::metadata(path)?.mode(), |out| out.write_all(&new))?;
     let swap = || -> io::Result<()> {
         let mode = std::fs::metadata(path)?.permissions();
         std::fs::set_permissions(&side, mode)?;
@@ -123,16 +138,143 @@ fn format_of(path: &Path) -> io::Result<ImageFormat> {
 }
 
 fn save(img: &DynamicImage, to: &Path, format: ImageFormat, mode: u32) -> io::Result<()> {
+    made_new(to, mode, |out| match format {
+        ImageFormat::Jpeg => img.to_rgb8().write_with_encoder(JpegEncoder::new_with_quality(out, QUALITY)),
+        other => img.write_to(out, other),
+    }.map_err(io::Error::other))
+}
+
+fn made_new(to: &Path, mode: u32, write: impl FnOnce(&mut BufWriter<&std::fs::File>) -> io::Result<()>) -> io::Result<()> {
     let made = OpenOptions::new().write(true).create_new(true).mode(mode & 0o777).open(to)?;
-    let write = || -> io::Result<()> {
+    let all = || -> io::Result<()> {
         let mut out = BufWriter::new(&made);
-        match format {
-            ImageFormat::Jpeg => img.to_rgb8().write_with_encoder(JpegEncoder::new_with_quality(&mut out, QUALITY)),
-            other => img.write_to(&mut out, other),
-        }.map_err(io::Error::other)?;
+        write(&mut out)?;
         out.into_inner().map_err(|e| e.into_error())?.sync_all()
     };
-    write().inspect_err(|_| super::proof::unmake(&made, to))
+    all().inspect_err(|_| super::proof::unmake(&made, to))
+}
+
+fn png_chunks(b: &[u8]) -> Option<Vec<([u8; 4], &[u8])>> {
+    let mut at = 8;
+    let mut out = Vec::new();
+    if b.get(..8)? != b"\x89PNG\r\n\x1a\n" {
+        return None;
+    }
+    while at + 12 <= b.len() {
+        let len = u32::from_be_bytes(b[at..at + 4].try_into().ok()?) as usize;
+        let end = at.checked_add(12)?.checked_add(len)?;
+        let kind: [u8; 4] = b[at + 4..at + 8].try_into().ok()?;
+        out.push((kind, b.get(at..end)?));
+        at = end;
+    }
+    Some(out)
+}
+
+fn webp_chunks(b: &[u8]) -> Option<Vec<([u8; 4], &[u8])>> {
+    if b.get(..4)? != b"RIFF" || b.get(8..12)? != b"WEBP" {
+        return None;
+    }
+    let mut at = 12;
+    let mut out = Vec::new();
+    while at + 8 <= b.len() {
+        let kind: [u8; 4] = b[at..at + 4].try_into().ok()?;
+        let len = u32::from_le_bytes(b[at + 4..at + 8].try_into().ok()?) as usize;
+        out.push((kind, b.get(at + 8..at.checked_add(8)?.checked_add(len)?)?));
+        at += 8 + len + (len & 1);
+    }
+    Some(out)
+}
+
+fn moving(b: &[u8]) -> bool {
+    if let Some(c) = png_chunks(b) {
+        return c.iter().any(|(k, _)| k == b"acTL");
+    }
+    webp_chunks(b).is_some_and(|c| c.iter().any(|(k, d)| k == b"ANIM" || k == b"ANMF" || (k == b"VP8X" && d.first().is_some_and(|f| f & 0x02 != 0))))
+}
+
+fn crc32(parts: &[&[u8]]) -> u32 {
+    let mut c = !0u32;
+    for b in parts.iter().flat_map(|p| p.iter()) {
+        c ^= u32::from(*b);
+        for _ in 0..8 {
+            c = if c & 1 != 0 { (c >> 1) ^ 0xEDB8_8320 } else { c >> 1 };
+        }
+    }
+    !c
+}
+
+fn png_chunk(kind: &[u8; 4], data: &[u8]) -> Vec<u8> {
+    let mut out = (data.len() as u32).to_be_bytes().to_vec();
+    out.extend_from_slice(kind);
+    out.extend_from_slice(data);
+    out.extend_from_slice(&crc32(&[kind, data]).to_be_bytes());
+    out
+}
+
+fn png_carry(old: &[u8], new: Vec<u8>, quarter: bool) -> Vec<u8> {
+    const KEPT: [&[u8; 4]; 11] = [b"iCCP", b"sRGB", b"gAMA", b"cHRM", b"sBIT", b"tEXt", b"zTXt", b"iTXt", b"tIME", b"eXIf", b"pHYs"];
+    let (Some(was), Some(now)) = (png_chunks(old), png_chunks(&new)) else { return new };
+    let mut carried = Vec::new();
+    for (kind, whole) in &was {
+        if !KEPT.contains(&kind) || now.iter().any(|(k, _)| k == kind) {
+            continue;
+        }
+        let data = &whole[8..whole.len() - 4];
+        match kind {
+            b"eXIf" => carried.extend(png_chunk(kind, &meta::exif_upright(data).unwrap_or_else(|_| data.to_vec()))),
+            b"pHYs" if quarter && data.len() == 9 => {
+                let mut d = data.to_vec();
+                d[..8].rotate_left(4);
+                carried.extend(png_chunk(kind, &d));
+            }
+            _ => carried.extend_from_slice(whole),
+        }
+    }
+    let Some((_, ihdr)) = now.first().filter(|(k, _)| k == b"IHDR") else { return new };
+    let after = 8 + ihdr.len();
+    let mut out = new[..after].to_vec();
+    out.extend(carried);
+    out.extend_from_slice(&new[after..]);
+    out
+}
+
+fn webp_carry(old: &[u8], new: Vec<u8>, (w, h): (u32, u32), alpha: bool) -> Vec<u8> {
+    let (Some(was), Some(now)) = (webp_chunks(old), webp_chunks(&new)) else { return new };
+    let find = |k: &[u8; 4]| was.iter().find(|(kind, _)| kind == k).map(|(_, d)| d.to_vec());
+    let (icc, exif, xmp) = (find(b"ICCP"), find(b"EXIF").map(|e| meta::exif_upright(&e).unwrap_or(e)), find(b"XMP "));
+    if icc.is_none() && exif.is_none() && xmp.is_none() {
+        return new;
+    }
+    let chunk = |kind: &[u8; 4], data: &[u8]| {
+        let mut c = kind.to_vec();
+        c.extend_from_slice(&(data.len() as u32).to_le_bytes());
+        c.extend_from_slice(data);
+        if data.len() & 1 == 1 {
+            c.push(0);
+        }
+        c
+    };
+    let flags = (u8::from(icc.is_some()) << 5) | (u8::from(alpha) << 4) | (u8::from(exif.is_some()) << 3) | (u8::from(xmp.is_some()) << 2);
+    let mut vp8x = vec![flags, 0, 0, 0];
+    vp8x.extend_from_slice(&(w - 1).to_le_bytes()[..3]);
+    vp8x.extend_from_slice(&(h - 1).to_le_bytes()[..3]);
+    let mut body = b"WEBP".to_vec();
+    body.extend(chunk(b"VP8X", &vp8x));
+    if let Some(d) = &icc {
+        body.extend(chunk(b"ICCP", d));
+    }
+    for (kind, data) in now.iter().filter(|(k, _)| k != b"VP8X") {
+        body.extend(chunk(kind, data));
+    }
+    for (kind, d) in [(b"EXIF", &exif), (b"XMP ", &xmp)] {
+        if let Some(d) = d {
+            body.extend(chunk(kind, d));
+        }
+    }
+    let mut out = b"RIFF".to_vec();
+    out.extend_from_slice(&(body.len() as u32).to_le_bytes());
+    out.extend(body);
+    out
 }
 
 #[cfg(test)]
@@ -181,6 +323,75 @@ mod tests {
             turn(&path, Turn::Over).unwrap();
             assert_eq!(red_side(&load(&path).unwrap()), right(right(before)), "over from {start}");
         }
+        std::fs::remove_dir_all(&d).unwrap();
+    }
+
+    fn exif_turned_right() -> Vec<u8> {
+        let mut t = b"II*\0\x08\0\0\0\x01\0".to_vec();
+        t.extend_from_slice(&[0x12, 0x01, 3, 0, 1, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0]);
+        t
+    }
+
+    fn with_chunks(png: &[u8], chunks: &[(&[u8; 4], &[u8])]) -> Vec<u8> {
+        let mut out = png[..33].to_vec();
+        for (k, d) in chunks {
+            out.extend(png_chunk(k, d));
+        }
+        out.extend_from_slice(&png[33..]);
+        out
+    }
+
+    #[test]
+    fn a_turned_png_or_webp_keeps_its_notes_and_exif_and_a_moving_picture_or_link_is_not_turned() {
+        let d = dir("carry");
+        let path = d.join("drawing.png");
+        save(&halves(), &path, ImageFormat::Png, 0o644).unwrap();
+        let plain = std::fs::read(&path).unwrap();
+        let phys = [0, 0, 0x0b, 0x13, 0, 0, 0x16, 0x26, 1];
+        std::fs::write(&path, with_chunks(&plain, &[(b"tEXt", b"Comment\0from the holiday"), (b"eXIf", &exif_turned_right()), (b"pHYs", &phys)])).unwrap();
+        assert_eq!(red_side(&load(&path).unwrap()), "top");
+        turn(&path, Turn::Right).unwrap();
+        let got = std::fs::read(&path).unwrap();
+        let chunks = png_chunks(&got).unwrap();
+        assert!(chunks.iter().any(|(k, c)| k == b"tEXt" && c.windows(16).any(|w| w == b"from the holiday")), "the note was dropped");
+        assert!(chunks.iter().any(|(k, _)| k == b"eXIf"), "the EXIF was dropped");
+        assert!(chunks.iter().any(|(k, c)| k == b"pHYs" && c[8..17] == [0, 0, 0x16, 0x26, 0, 0, 0x0b, 0x13, 1]), "the density was not swapped across");
+        assert_eq!(red_side(&load(&path).unwrap()), "right", "turned twice: the EXIF still turns it");
+        let moving = d.join("moving.png");
+        let apng = with_chunks(&plain, &[(b"acTL", &[0, 0, 0, 2, 0, 0, 0, 0])]);
+        std::fs::write(&moving, &apng).unwrap();
+        assert!(turn(&moving, Turn::Left).is_err());
+        assert_eq!(std::fs::read(&moving).unwrap(), apng);
+        let link = d.join("link.png");
+        std::os::unix::fs::symlink(&moving, &link).unwrap();
+        assert!(turn(&link, Turn::Left).is_err());
+        assert!(std::fs::symlink_metadata(&link).unwrap().file_type().is_symlink());
+        let webp = d.join("photo.webp");
+        save(&halves(), &webp, ImageFormat::WebP, 0o644).unwrap();
+        let lossless = std::fs::read(&webp).unwrap();
+        let (_, vp8l) = webp_chunks(&lossless).unwrap().into_iter().find(|(k, _)| k == b"VP8L").unwrap();
+        let mut body = b"WEBP".to_vec();
+        for (k, data) in [(b"VP8X", &[0x08u8, 0, 0, 0, 31, 0, 0, 15, 0, 0][..]), (b"VP8L", vp8l), (b"EXIF", &b"II*\0\x08\0\0\0\0\0\0\0\0\0"[..])] {
+            body.extend_from_slice(k);
+            body.extend_from_slice(&(data.len() as u32).to_le_bytes());
+            body.extend_from_slice(data);
+            if data.len() & 1 == 1 {
+                body.push(0);
+            }
+        }
+        let mut file = b"RIFF".to_vec();
+        file.extend_from_slice(&(body.len() as u32).to_le_bytes());
+        file.extend(body);
+        std::fs::write(&webp, &file).unwrap();
+        turn(&webp, Turn::Left).unwrap();
+        let got = std::fs::read(&webp).unwrap();
+        assert!(webp_chunks(&got).unwrap().iter().any(|(k, _)| k == b"EXIF"), "the WebP's EXIF was dropped");
+        let img = load(&webp).unwrap();
+        assert_eq!((img.width(), img.height(), red_side(&img)), (16, 32, "bottom"));
+        let mut animated = file.clone();
+        animated[20] |= 0x02;
+        std::fs::write(&webp, &animated).unwrap();
+        assert!(turn(&webp, Turn::Left).is_err());
         std::fs::remove_dir_all(&d).unwrap();
     }
 

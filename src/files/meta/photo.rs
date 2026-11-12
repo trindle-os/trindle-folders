@@ -1,4 +1,4 @@
-// Reading a photo's EXIF notes, and writing changes to them in JPEG and PNG.
+//! Reading a photo's EXIF notes, and writing changes to them in JPEG and PNG.
 
 use std::fs::File;
 use std::io::{self, BufReader, Read, Seek, SeekFrom};
@@ -318,6 +318,12 @@ fn exif_date(s: &str) -> io::Result<String> {
     out[7] = b':';
     out[10] = b' ';
     Ok(String::from_utf8_lossy(&out).into_owned())
+}
+
+pub fn exif_upright(block: &[u8]) -> io::Result<Vec<u8>> {
+    let mut t = parse_tiff(block)?;
+    apply_edit(&mut t, &ExifEdit { orientation: Some(1), ..ExifEdit::default() })?;
+    write_tiff(&t)
 }
 
 fn apply_edit(t: &mut Tiff, e: &ExifEdit) -> io::Result<()> {

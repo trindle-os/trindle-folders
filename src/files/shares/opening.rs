@@ -1,4 +1,4 @@
-// Opening a computer or a share: listing it, mounting it, and the sign-in card when it asks.
+//! Opening a computer or a share: listing it, mounting it, and the sign-in card when it asks.
 
 use std::path::PathBuf;
 
@@ -96,13 +96,13 @@ impl Files {
 
     pub(in crate::files) fn smb_open(&mut self, p: usize, a: &Address) {
         let (server, Some(share), rest) = parts(a) else { return };
+        let typed = self.typed_for(a);
         self.shares.refresh();
         if let Some(m) = self.shares.open_at(&server, &share) {
             let at = m.at.clone();
             self.remember_mounted(&server, &share, &at);
             return self.share_arrived(self.cols[p].tab, p, a, at.join(&rest));
         }
-        let typed = self.typed_for(a);
         self.say(t!("folders-shares-opening-share", share = &share, server = &server), false);
         self.smb_mount(self.cols[p].tab, p, server, share, rest, typed, None, Reach::Look(None));
     }
@@ -223,6 +223,6 @@ pub(super) fn typed_login(a: &Address) -> Option<Login> {
     let user = a.user.as_ref()?;
     let (domain, user) = user.split_once(';').unwrap_or(("", user));
     let password = a.password.clone()?;
-    let l = Login { user: user.to_string(), domain: domain.to_string(), password: Zeroizing::new(password) };
+    let l = Login { user: user.to_string(), domain: domain.to_string(), password };
     l.check().is_ok().then_some(l)
 }

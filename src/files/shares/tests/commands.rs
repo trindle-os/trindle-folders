@@ -1,4 +1,4 @@
-// Addresses, command lines and the words they hold no login in.
+//! Addresses, command lines and the words they hold no login in.
 
 use crate::files::remote::Address;
 use crate::common::smb::Login;

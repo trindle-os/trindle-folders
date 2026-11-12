@@ -1,4 +1,4 @@
-// F2, the menu, refused names and new things, named in the row.
+//! F2, the menu, refused names and new things, named in the row.
 
 use super::*;
 
@@ -90,7 +90,7 @@ fn refusal_cases(b: &mut Bench, dir: &Path, p: usize, what: &str) {
     b.key(Keysym::F2);
     let boxed = b.name_box().expect("open");
     let long = "x".repeat(256);
-    for (typed, why) in [("", "A name cannot be empty."), ("a/b", "A name cannot hold a slash."),
+    for (typed, why) in [("", "Type a name."), ("a/b", "A name can't have a slash in it."),
                          ("notes.txt", "A file called notes.txt is already here."),
                          ("Albums", "A folder called Albums is already here."), (long.as_str(), "That name is too long.")] {
         b.key_with(Keysym::a, select_all());
@@ -123,7 +123,7 @@ fn refusal_cases(b: &mut Bench, dir: &Path, p: usize, what: &str) {
     b.key(Keysym::Return);
     fs::set_permissions(&here, fs::Permissions::from_mode(0o755)).unwrap();
     let r = b.f.renaming.clone().unwrap_or_else(|| panic!("{what}: the box stays open when the disk refuses"));
-    assert!(r.text == "locked.pdf" && r.why.as_deref().is_some_and(|w| w.starts_with("report.pdf could not be renamed")), "{what}: {:?}", r.why);
+    assert!(r.text == "locked.pdf" && r.why.as_deref().is_some_and(|w| w.starts_with("Folders couldn't rename report.pdf")), "{what}: {:?}", r.why);
     held_still(&before, &b.places(), &format!("{what}, the disk"));
     b.f.update(Msg::RenameText("fine.pdf".into()));
     b.show();

@@ -1,4 +1,4 @@
-// What the List view's music, photo and PDF columns show about a file.
+//! What the List view's music, photo and PDF columns show about a file.
 
 use std::collections::HashSet;
 use std::fs::File;
@@ -330,6 +330,8 @@ fn ogg_packets(buf: &[u8], most: usize) -> Vec<Vec<u8>> {
 
 const PDF_WHOLE: u64 = 16 << 20;
 const PDF_PART: u64 = 4 << 20;
+const PDF_INFLATED: u64 = 32 << 20;
+const PDF_BACK: usize = 4096;
 
 fn pdf_pages(path: &Path) -> Option<u32> {
     let mut file = crate::common::files::open_file(path).ok()?;
@@ -346,9 +348,7 @@ fn pdf_pages(path: &Path) -> Option<u32> {
         return None;
     }
     let mut most = pages_count(&bytes);
-    for stream in object_streams(&bytes) {
-        most = most.max(pages_count(&stream));
-    }
+    object_streams(&bytes, &mut |stream| most = most.max(pages_count(stream)));
     most.filter(|&n| n > 0)
 }
 
@@ -362,7 +362,8 @@ fn pages_count(b: &[u8]) -> Option<u32> {
         if !rest.starts_with(b"/Pages") || rest.get(6).is_some_and(|c| c.is_ascii_alphanumeric()) {
             continue;
         }
-        let open = b[..at].windows(2).rposition(|w| w == b"<<").unwrap_or(0);
+        let lo = at.saturating_sub(PDF_BACK);
+        let open = b[lo..at].windows(2).rposition(|w| w == b"<<").map_or(lo, |p| lo + p);
         let close = find(&b[at..], b">>").map_or(b.len(), |e| at + e);
         let dict = &b[open..close];
         if let Some(c) = find(dict, b"/Count") {
@@ -375,8 +376,8 @@ fn pages_count(b: &[u8]) -> Option<u32> {
     best
 }
 
-fn object_streams(b: &[u8]) -> Vec<Vec<u8>> {
-    let mut out = Vec::new();
+fn object_streams(b: &[u8], each: &mut dyn FnMut(&[u8])) -> u64 {
+    let mut total = 0;
     let mut from = 0;
     while let Some(i) = find(&b[from..], b"/ObjStm") {
         let at = from + i;
@@ -389,13 +390,18 @@ fn object_streams(b: &[u8]) -> Vec<Vec<u8>> {
             data += 1;
         }
         let end = find(&b[data..], b"endstream").map_or(b.len(), |e| data + e);
+        let left = PDF_INFLATED - total;
+        if left == 0 {
+            break;
+        }
         let mut inflated = Vec::new();
-        if flate2::read::ZlibDecoder::new(&b[data..end]).take(PDF_PART).read_to_end(&mut inflated).is_ok() || !inflated.is_empty() {
-            out.push(inflated);
+        if flate2::read::ZlibDecoder::new(&b[data..end]).take(PDF_PART.min(left)).read_to_end(&mut inflated).is_ok() || !inflated.is_empty() {
+            total += inflated.len() as u64;
+            each(&inflated);
         }
         from = end;
     }
-    out
+    total
 }
 
 fn find(hay: &[u8], needle: &[u8]) -> Option<usize> {
@@ -547,6 +553,18 @@ mod tests {
         assert_eq!(read(&d.join("packed.pdf")).pages, Some(31));
         std::fs::write(d.join("fake.pdf"), b"not a pdf").unwrap();
         assert_eq!(read(&d.join("fake.pdf")).pages, None);
+        let mut z = flate2::write::ZlibEncoder::new(Vec::new(), flate2::Compression::best());
+        z.write_all(&vec![b' '; PDF_PART as usize]).unwrap();
+        let swell = z.finish().unwrap();
+        let mut f = b"%PDF-1.5\n".to_vec();
+        for _ in 0..40 {
+            f.extend_from_slice(b"1 0 obj << /Type /ObjStm >>\nstream\n");
+            f.extend_from_slice(&swell);
+            f.extend_from_slice(b"\nendstream\nendobj\n");
+        }
+        let mut held = 0;
+        let total = object_streams(&f, &mut |s| held = held.max(s.len()));
+        assert!(total <= PDF_INFLATED && held as u64 <= PDF_PART, "{total} inflated");
         std::fs::remove_dir_all(&d).unwrap();
     }
 

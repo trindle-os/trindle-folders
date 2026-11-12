@@ -23,12 +23,14 @@ for lib in $needs; do
 done
 
 rm -rf "$stage" "$stage.deb"
-install -d "$stage/DEBIAN" "$stage/usr/bin" "$stage/usr/share/applications" "$stage/usr/share/dbus-1/services" "$stage/usr/share/doc/trindle-folders"
+install -d "$stage/DEBIAN" "$stage/usr/bin" "$stage/usr/share/applications" "$stage/usr/share/dbus-1/services" "$stage/usr/share/polkit-1/actions" "$stage/usr/share/doc/trindle-folders"
 install -m 0755 "$root/target/release/trindle-folders" "$stage/usr/bin/trindle-folders"
 ln -s trindle-folders "$stage/usr/bin/trindle-files"
 install -m 0644 "$root/share/applications/trindle-folders.desktop" "$stage/usr/share/applications/trindle-folders.desktop"
 install -m 0644 "$here/dbus/org.trindle.Files.FileManager1.service" "$stage/usr/share/dbus-1/services/org.trindle.Files.FileManager1.service"
+install -m 0644 "$here/polkit/org.trindle.folders.policy" "$stage/usr/share/polkit-1/actions/org.trindle.folders.policy"
 install -m 0644 "$root/LICENSE" "$stage/usr/share/doc/trindle-folders/copyright"
+python3 -I "$here/notices.py" "$root" > "$stage/usr/share/doc/trindle-folders/third-party-notices.txt"
 for lang in "$root"/share/lang/*; do
     install -d "$stage/usr/share/trindle/lang/$(basename "$lang")"
     install -m 0644 "$lang"/*.ftl "$stage/usr/share/trindle/lang/$(basename "$lang")/"
@@ -51,7 +53,6 @@ Description: Folders for Trindle: a file manager for Wayland desktops only
  This works only on a Wayland desktop. It does not open on an X11 desktop.
 CONTROL
 cat > "$stage/DEBIAN/postinst" <<'POSTINST'
-#!/bin/sh
 set -e
 if [ "$1" = configure ] && command -v update-desktop-database >/dev/null 2>&1; then
     update-desktop-database -q /usr/share/applications || true

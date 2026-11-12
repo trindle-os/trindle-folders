@@ -1,4 +1,4 @@
-// The one rule for logins that leave: what is kept and what is dropped when a login ends.
+//! LOGINS THAT LEAVE, the rule in one place. A login with a secret leaves this computer only by way of `leave`, and only to an address the person gave, an address a sign-in card showed and they pressed Open on, or a far end that proves who it is by certificate.
 
 use crate::common::smb;
 

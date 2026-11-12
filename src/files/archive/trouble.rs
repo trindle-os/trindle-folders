@@ -1,4 +1,4 @@
-// The password a person typed and the troubles an archive can give.
+//! The password a person typed and the troubles an archive can give.
 
 use std::io::{self, Read};
 

@@ -1,4 +1,4 @@
-// Reading a 7z's headers, packed or locked or plain.
+//! Reading a 7z's headers, packed or locked or plain.
 
 use std::fs::File;
 use std::io::{self, Read};

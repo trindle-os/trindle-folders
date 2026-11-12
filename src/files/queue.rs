@@ -1,4 +1,4 @@
-// A queue of small jobs run on threads of their own.
+//! A queue of small jobs run on threads of their own.
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{mpsc, Arc, Mutex};

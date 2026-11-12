@@ -1,4 +1,4 @@
-// Names a server gives: what is made safe before the name of a thing on a server is shown or used.
+//! NAMES A SERVER GIVES. A name a server or phone gives is whatever the far end says, so every list passes through here and a name that is not one plain name (`common::files::is_one_name`) is never an entry: it is kept apart, told to the person, and nothing is joined, fetched, sent or removed by it.
 
 use std::io::{Read, Write};
 
@@ -112,7 +112,7 @@ mod tests {
         fn read(&mut self, _path: &str, _to: &mut dyn Write, _progress: Progress) -> Result<u64, Error> {
             Ok(0)
         }
-        fn write(&mut self, _path: &str, _from: &mut dyn Read, _size: u64, _progress: Progress) -> Result<u64, Error> {
+        fn write_new(&mut self, _path: &str, _from: &mut dyn Read, _size: u64, _progress: Progress) -> Result<u64, Error> {
             Ok(0)
         }
         fn mkdir(&mut self, _path: &str) -> Result<(), Error> {
@@ -141,7 +141,7 @@ mod tests {
         assert_eq!(got.entries.iter().map(|e| e.name.as_str()).collect::<Vec<_>>(), good);
         assert_eq!(got.refused.len(), bad.len(), "{:?}", got.refused);
         assert_eq!(got.held(), bad.len() + good.len(), "the folder itself and the one above it are not things in it");
-        assert_eq!(got.refused[0], "a thing with no name");
+        assert_eq!(got.refused[0], "something with no name");
         assert_eq!(got.refused[3], "../up.txt");
         assert!(got.refused.iter().all(|r| !r.is_empty() && !r.contains('\0')), "{:?}", got.refused);
         for e in &got.entries {

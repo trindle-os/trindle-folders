@@ -1,4 +1,4 @@
-// A press anywhere in a pane makes it the one in use.
+//! A press anywhere in a pane makes it the one in use.
 
 use super::*;
 

@@ -1,4 +1,4 @@
-// The List view's columns, chosen by the person: which there are, their words and widths, and what each says about an item.
+//! The List view's columns, chosen by the person: which there are, their
 
 use std::cell::RefCell;
 use std::collections::HashMap;

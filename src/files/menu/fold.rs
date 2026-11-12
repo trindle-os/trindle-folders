@@ -1,4 +1,4 @@
-// Which rows of a menu are kept in sub-menus, so the first level is short.
+//! Which rows of a menu are kept in sub-menus, so the first level is short.
 
 use super::lines::without;
 use super::{line, Act, Kind, Line};

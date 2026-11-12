@@ -1,4 +1,4 @@
-// The window's side of servers and phones: what it knows of them, the messages about them and the work they start.
+//! The window's side of servers and phones: what it knows of them, the messages about them and the work they start.
 
 use std::collections::HashMap;
 use std::fs::{self, File};
@@ -33,6 +33,24 @@ pub struct Far {
     pub phones: Vec<remote::Phone>,
     pub waiting: Vec<String>,
     pub fetched: HashMap<PathBuf, Copied>,
+    pub(super) made: std::collections::HashSet<PathBuf>,
+}
+
+impl Far {
+    pub(in crate::files) fn forget_copies(&self) {
+        for dir in &self.made {
+            let _ = fs::remove_dir_all(dir);
+        }
+    }
+}
+
+pub(in crate::files) fn forget_fetched() {
+    let base = fetch_dir("");
+    std::thread::spawn(move || {
+        if fs::symlink_metadata(&base).is_ok_and(|m| m.is_dir()) {
+            let _ = fs::remove_dir_all(&base);
+        }
+    });
 }
 
 pub struct Copied {
@@ -56,6 +74,13 @@ pub(super) fn fetch_dir(host: &str) -> PathBuf {
     #[cfg(not(test))]
     let base = crate::common::files::cache_home().join("trindle-files").join("remote");
     base.join(host)
+}
+
+fn copy_dir(a: &Address) -> PathBuf {
+    use sha2::{Digest, Sha256};
+    let whole = Address { password: None, ..a.clone() }.to_string();
+    let sum = Sha256::digest(whole.as_bytes());
+    fetch_dir(&a.host).join(sum[..12].iter().map(|b| format!("{b:02x}")).collect::<String>())
 }
 
 pub(super) fn changed_time(p: &Path) -> Option<std::time::SystemTime> {
@@ -107,7 +132,7 @@ pub enum FarMsg {
     Made { side: usize, path: PathBuf, got: Result<(), String> },
     Open,
     Address(String),
-    Password(String),
+    Password(crate::files::remote::Secret),
     Key(String),
     PickKey,
     Trust,
@@ -118,16 +143,7 @@ pub enum FarMsg {
 
 impl Files {
     pub(super) fn far_off<T: Send + 'static>(&mut self, job: impl FnOnce() -> T + Send + 'static, done: impl FnOnce(T) -> FarMsg + Send + 'static) {
-        match &self.post {
-            Some(post) => {
-                let post = post.clone();
-                let _ = std::thread::Builder::new().name("folders-far".into()).spawn(move || post.send(Msg::Far(done(job()))));
-            }
-            None => {
-                let m = done(job());
-                self.far_msg(m);
-            }
-        }
+        self.off_thread("folders-far", job, move |got| Msg::Far(done(got)));
     }
 
     pub(in crate::files) fn far_list(&mut self, t: usize, p: usize) {
@@ -169,9 +185,12 @@ impl Files {
         if !is_one_name(name.as_bytes()) || !is_one_name(a.host.as_bytes()) {
             return self.say_help(t!("folders-far-unsafe-name"), help::NAME_REFUSED);
         }
-        let dir = fetch_dir(&a.host);
+        let dir = if then == Then::Open { copy_dir(&a) } else { copy_dir(&a).with_extension("view") };
         let to = dir.join(&name);
-        self.far.fetched.remove(&to);
+        if self.far.fetched.contains_key(&to) {
+            return self.far_msg(FarMsg::Fetched { far: path.to_path_buf(), then, got: Ok(to) });
+        }
+        self.far.made.insert(dir.clone());
         let links = self.far.links.clone();
         if then == Then::Open {
             self.say(t!("folders-far-fetching", name = &name), false);
@@ -179,7 +198,10 @@ impl Files {
         let far = path.to_path_buf();
         self.far_off(move || {
             fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
-            let listed = links.with(&a, |r| r.stat(path_of(&a))).map_err(|e| e.to_string())?.size;
+            let listed = links.with(&a, |r| {
+                let e = r.stat(path_of(&a))?;
+                if e.kind == remote::Kind::Link { r.follow(path_of(&a)) } else { Ok(e) }
+            }).map_err(|e| e.to_string())?.size;
             let mut file = File::create(&to).map_err(|e| e.to_string())?;
             match take_in(&links, &a, listed, room_in(&dir), &mut file, &mut || true) {
                 Ok(_) => Ok(to),

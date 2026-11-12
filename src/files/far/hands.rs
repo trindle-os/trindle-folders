@@ -1,4 +1,4 @@
-// What the crew's threads do with one file: bring it, prove it whole, give it its name, take the first away.
+//! What the crew's threads do with one file: bring it, prove it whole, give it its name, take the first away.
 
 use std::fs::{self, File};
 use std::io;
@@ -59,6 +59,10 @@ pub(super) fn save_back(links: &Links, a: &Address, local: &Path) -> Result<(), 
         return Err(why);
     }
     hands.name_it(&landing, &target, over.as_ref(), true).map_err(|e| e.to_string())
+}
+
+pub(super) fn reason(e: &impl ToString) -> String {
+    e.to_string().trim_end_matches('.').to_string()
 }
 
 impl Hands<'_> {
@@ -129,7 +133,7 @@ impl Hands<'_> {
         if matches!(e, Error::Cancelled) || self.stop.load(Ordering::Relaxed) {
             out.stopped = true;
         } else {
-            out.failed.push(t!("folders-far-failed-why", name = name, why = &e.to_string()));
+            out.failed.push(t!("folders-far-failed-why", name = name, why = &reason(e)));
         }
         out.got = Got::Failed;
     }
@@ -159,7 +163,7 @@ impl Hands<'_> {
                     if let Some(made) = made {
                         proof::unmake(made, at);
                     }
-                    out.failed.push(t!("folders-far-failed-why", name = name, why = &why.to_string()));
+                    out.failed.push(t!("folders-far-failed-why", name = name, why = &reason(&why)));
                     out.got = Got::Failed;
                     return false;
                 }
@@ -237,7 +241,7 @@ impl Hands<'_> {
         self.links.with(b, |r| r.rename(path_of(b), path_of(kept))).map_err(dropped)?;
         let back = |why: Error| match free(target).then(|| self.links.with(kept, |r| r.rename(path_of(kept), path_of(b)))) {
             Some(Ok(())) => dropped(why),
-            _ => Error::Failed(t!("folders-far-aside-both", old = aside.name(), new = landing.name(), why = &why.to_string())),
+            _ => Error::Failed(t!("folders-far-aside-both", old = aside.name(), new = landing.name(), why = &reason(&why))),
         };
         if !is_it(&aside) {
             return Err(back(taken()));
@@ -252,7 +256,7 @@ impl Hands<'_> {
             Ok(true) => Ok(()),
             Err(e) if missing(&e) => Ok(()),
             Ok(false) => Err(Error::Failed(t!("folders-far-aside-kept", old = aside.name()))),
-            Err(e) => Err(Error::Failed(t!("folders-far-aside-kept-why", old = aside.name(), why = &e.to_string()))),
+            Err(e) => Err(Error::Failed(t!("folders-far-aside-kept-why", old = aside.name(), why = &reason(&e)))),
         }
     }
 

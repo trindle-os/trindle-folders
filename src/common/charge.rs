@@ -1,4 +1,4 @@
-// Whether this computer is a laptop running on its battery.
+//! Whether this computer is a laptop running on its battery.
 
 use std::path::Path;
 

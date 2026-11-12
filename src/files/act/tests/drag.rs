@@ -1,4 +1,4 @@
-// Dragging items onto folders and the menu a right drag ends in.
+//! Dragging items onto folders and the menu a right drag ends in.
 
 use std::fs;
 
@@ -97,7 +97,7 @@ fn a_right_drag_lands_on_a_sidebar_row_a_tab_or_its_own_folder() {
     f.menu = None;
     let recent = f.place_list().iter().position(|w| *w == Where::Recent).unwrap();
     land(&mut f, Land::Place(recent));
-    assert!(f.menu.is_none() && f.said.contains("only be dropped on a folder"), "{}", f.said);
+    assert!(f.menu.is_none() && f.said.contains("only drop things on a folder"), "{}", f.said);
     f.update(Msg::NewTab(Some(1)));
     f.go(1, Where::Folder(dir.join("tabbed")));
     f.update(Msg::Tab(1, 0));

@@ -1,4 +1,4 @@
-// Tests letting things go on the names of the path at the top, with the pointer and the window as a person has them.
+//! Tests letting things go on the names of the path at the top, with the
 
 use std::fs;
 use std::path::PathBuf;

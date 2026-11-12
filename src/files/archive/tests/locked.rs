@@ -1,4 +1,4 @@
-// Zip and 7z locked with a password.
+//! Zip and 7z locked with a password.
 
 use super::*;
 
@@ -109,7 +109,7 @@ fn a_lock_folders_cannot_open_says_which_and_never_asks_in_vain() {
             let e = extract(arc, key, &out, Place::Here, &stop, &quiet).unwrap_err();
             assert_eq!(trouble_of(&e), Some(Trouble::LockedForeign), "{arc:?}");
             assert_eq!(wants_key(&e), None, "{arc:?}");
-            assert_eq!(why(&e), "it is locked with a password and packed a way Folders cannot unlock");
+            assert_eq!(why(&e), "it uses a kind of password protection Folders can't unlock");
         }
         assert_eq!(trouble_of(&unlocks(arc, &right).unwrap_err()), Some(Trouble::LockedForeign), "{arc:?}");
     }

@@ -1,4 +1,4 @@
-// The one way any Trindle program offers a "More" beside a failure message.
+//! The one way any Trindle program offers a "More" beside a failure
 
 use crate::toolkit::t;
 use crate::toolkit::widget::{button as round, Node};

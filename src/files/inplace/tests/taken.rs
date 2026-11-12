@@ -1,4 +1,4 @@
-// A name taken by the other kind says which is there.
+//! A name taken by the other kind says which is there.
 
 use super::*;
 

@@ -1,4 +1,4 @@
-// Files: Trindle's own file manager, drawn by the Trindle Toolkit.
+//! Files: Trindle's own file manager, drawn by the Trindle Toolkit. Folders
 
 pub mod kinds;
 mod act;
@@ -61,6 +61,7 @@ mod queue;
 mod remote;
 mod remembered;
 mod rename;
+pub(crate) mod root;
 mod search;
 mod settings;
 mod shown;
@@ -128,6 +129,12 @@ struct Running {
 }
 
 pub fn main(args: Vec<String>) -> i32 {
+    if args.iter().any(|a| a == root::FLAG) {
+        return match root::settle(&args) {
+            Some(folder) => open(&Loop::new(), vec![folder], false),
+            None => 1,
+        };
+    }
     let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("/"));
     let folders = folders(args.iter().skip(1).map(String::as_str), &cwd);
     let settings = args.iter().any(|a| a == settings::OPEN_FLAG);
@@ -148,6 +155,9 @@ pub fn main(args: Vec<String>) -> i32 {
     let (ev2, b2) = (ev.clone(), b.clone());
     crate::toolkit::once::claim(&bus, &events, NAME, PATH, move || {
         inside::forget_taken_out();
+        rename::recover();
+        far::forget_fetched();
+        preview::forget_viewed();
         match start(&ev, &b, wanted.borrow_mut().take().unwrap_or_default(), for_a_call) {
             Some(running) => {
                 if settings {
@@ -247,7 +257,7 @@ fn serve_manager(events: &Loop, bus: &Bus, asks: Post<Do>) -> Option<Served> {
 fn manager_ask(method: &str, uris: &[String]) -> Option<Do> {
     let paths: Vec<PathBuf> = uris.iter().take(MANAGER_MOST)
         .filter_map(|u| if u.starts_with("file://") { kinds::uri_path(u) } else { None })
-        .filter(|p| p.is_absolute() && p.exists())
+        .filter(|p| p.is_absolute() && reach::meta(p, true).is_some())
         .collect();
     if paths.is_empty() {
         return None;
@@ -295,25 +305,19 @@ const DRIVES_RECHECK: Duration = Duration::from_secs(2);
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Next {
     Stay,
-    Hide,
-    Show,
     Quit,
 }
 
 fn on_close(busy: Busy) -> Next {
-    if busy.asking {
+    if busy.running > 0 {
         Next::Stay
-    } else if busy.running > 0 {
-        Next::Hide
     } else {
         Next::Quit
     }
 }
 
-fn on_news(away: bool, over: bool, busy: Busy) -> Next {
-    if busy.asking || busy.trouble {
-        if away { Next::Show } else { Next::Stay }
-    } else if busy.running == 0 && (away || over) {
+fn on_news(over: bool, busy: Busy) -> Next {
+    if !busy.asking && !busy.trouble && busy.running == 0 && over {
         Next::Quit
     } else {
         Next::Stay
@@ -324,8 +328,7 @@ fn window(events: &Loop, folders: Vec<PathBuf>, chooser: bool) -> Option<(Rc<Sho
     let gone = events.clone();
     let display = Display::connect(events, move || gone.quit())?;
     let slot: Rc<RefCell<Weak<Shown<Files>>>> = Rc::new(RefCell::new(Weak::new()));
-    let away = Rc::new(Cell::new(false));
-    let asks = answer_asks(events, slot.clone(), away.clone());
+    let asks = answer_asks(events, slot.clone());
     let app = Files::new(folders);
     let fd = app.watch_fd();
     let kind = Kind::Window { title: t!("folders-mod-window-title").into(), app_id: NAME.into() };
@@ -338,12 +341,12 @@ fn window(events: &Loop, folders: Vec<PathBuf>, chooser: bool) -> Option<(Rc<Sho
         }
     });
     let over = Rc::new(Cell::new(false));
-    let close = closer(events, &shown, away.clone(), over.clone(), chooser, post.clone());
+    let close = closer(events, &shown, over.clone(), chooser, post.clone());
     let c = close.clone();
     shown.window.on_close(move || c());
     let closing = events.post(move |_: ()| close());
     repaint_on_frames(events, &shown);
-    let told = told_of_work(events, away, over, asks.clone());
+    let told = told_of_work(events, over);
     let w = Rc::downgrade(&shown);
     let speak = events.post(move |words: String| {
         if let Some(s) = w.upgrade() {
@@ -368,12 +371,11 @@ fn window(events: &Loop, folders: Vec<PathBuf>, chooser: bool) -> Option<(Rc<Sho
     Some((shown, asks))
 }
 
-fn answer_asks(events: &Loop, slot: Rc<RefCell<Weak<Shown<Files>>>>, away: Rc<Cell<bool>>) -> Post<Do> {
+fn answer_asks(events: &Loop, slot: Rc<RefCell<Weak<Shown<Files>>>>) -> Post<Do> {
     events.post(move |ask: Do| {
         let Some(shown) = slot.borrow().upgrade() else { return };
         match ask {
             Do::Show => {
-                away.set(false);
                 shown.window.raise();
             }
             Do::Open(paths) => shown.change(|f| f.update(Msg::Add(paths))),
@@ -383,19 +385,15 @@ fn answer_asks(events: &Loop, slot: Rc<RefCell<Weak<Shown<Files>>>>, away: Rc<Ce
     })
 }
 
-fn closer(events: &Loop, shown: &Rc<Shown<Files>>, away: Rc<Cell<bool>>, over: Rc<Cell<bool>>, chooser: bool, waiting: Post<Msg>) -> Rc<dyn Fn()> {
+fn closer(events: &Loop, shown: &Rc<Shown<Files>>, over: Rc<Cell<bool>>, chooser: bool, waiting: Post<Msg>) -> Rc<dyn Fn()> {
     let (ev, w) = (events.clone(), Rc::downgrade(shown));
     Rc::new(move || {
         let Some(s) = w.upgrade() else { return ev.quit() };
         s.change(Files::choose_closed);
         over.set(chooser);
         match on_close(s.with(Files::busy)) {
-            Next::Hide => {
-                away.set(true);
-                s.window.set_visible(false);
-            }
             Next::Quit => ev.quit(),
-            Next::Stay | Next::Show => {
+            Next::Stay => {
                 waiting.send(Msg::Waiting);
             }
         }
@@ -414,14 +412,12 @@ fn repaint_on_frames(events: &Loop, shown: &Rc<Shown<Files>>) {
     });
 }
 
-fn told_of_work(events: &Loop, away: Rc<Cell<bool>>, over: Rc<Cell<bool>>, back: Post<Do>) -> Post<Busy> {
+fn told_of_work(events: &Loop, over: Rc<Cell<bool>>) -> Post<Busy> {
     let ev = events.clone();
-    events.post(move |busy: Busy| match on_news(away.get(), over.get(), busy) {
-        Next::Show => {
-            back.send(Do::Show);
+    events.post(move |busy: Busy| {
+        if on_news(over.get(), busy) == Next::Quit {
+            ev.quit();
         }
-        Next::Quit => ev.quit(),
-        Next::Stay | Next::Hide => {}
     })
 }
 
@@ -541,30 +537,23 @@ mod tests {
     use super::*;
 
     #[test]
-    fn a_window_closed_while_work_goes_on_leaves_the_work_going_and_comes_back_to_ask() {
+    fn a_window_cannot_be_closed_while_work_goes_on() {
         let busy = |running, asking, trouble| Busy { running, asking, trouble };
         assert_eq!(on_close(busy(0, false, false)), Next::Quit);
         assert_eq!(on_close(busy(0, false, true)), Next::Quit);
-        assert_eq!(on_close(busy(2, false, false)), Next::Hide);
+        assert_eq!(on_close(busy(2, false, false)), Next::Stay);
         assert_eq!(on_close(busy(1, true, false)), Next::Stay);
-        assert_eq!(on_news(false, false, busy(0, false, false)), Next::Stay);
-        assert_eq!(on_news(false, false, busy(1, true, true)), Next::Stay);
-        assert_eq!(on_news(true, false, busy(1, false, false)), Next::Stay);
-        assert_eq!(on_news(true, false, busy(1, true, false)), Next::Show);
-        assert_eq!(on_news(true, false, busy(0, false, true)), Next::Show);
-        assert_eq!(on_news(true, false, busy(0, false, false)), Next::Quit);
+        assert_eq!(on_news(false, busy(0, false, false)), Next::Stay);
+        assert_eq!(on_news(false, busy(1, true, true)), Next::Stay);
     }
 
     #[test]
-    fn a_chooser_that_has_answered_ends_with_its_work_on_the_screen_or_off_it() {
+    fn a_chooser_that_has_answered_ends_when_its_work_is_done_and_well() {
         let busy = |running, asking, trouble| Busy { running, asking, trouble };
-        assert_eq!(on_news(false, true, busy(1, false, false)), Next::Stay);
-        assert_eq!(on_news(false, true, busy(1, true, false)), Next::Stay);
-        assert_eq!(on_news(false, true, busy(0, false, true)), Next::Stay);
-        assert_eq!(on_news(false, true, busy(0, false, false)), Next::Quit);
-        assert_eq!(on_news(false, false, busy(0, false, false)), Next::Stay);
-        assert_eq!(on_news(true, true, busy(1, true, false)), Next::Show);
-        assert_eq!(on_news(false, true, busy(0, false, false)), Next::Quit);
+        assert_eq!(on_news(true, busy(1, false, false)), Next::Stay);
+        assert_eq!(on_news(true, busy(1, true, false)), Next::Stay);
+        assert_eq!(on_news(true, busy(0, false, true)), Next::Stay);
+        assert_eq!(on_news(true, busy(0, false, false)), Next::Quit);
     }
 
     #[test]
@@ -600,6 +589,10 @@ mod tests {
         assert!(manager_ask("ShowItems", &[uri(&dir.join("gone.txt"))]).is_none());
         assert!(manager_ask("ShowItems", &["file://a.txt".to_string(), "a.txt".to_string(), "sftp://host/a.txt".to_string()]).is_none());
         assert!(manager_ask("Unknown", &items).is_none());
+        reach::never(&dir, true);
+        let asked = manager_ask("ShowItems", &items);
+        reach::never(&dir, false);
+        assert!(asked.is_none(), "a place that does not answer was looked at with no time limit");
         let crowd = vec![uri(&dir.join("a.txt")); MANAGER_MOST * 3];
         assert!(matches!(manager_ask("ShowItems", &crowd), Some(Do::Reveal(p, _)) if p.len() == MANAGER_MOST));
         std::fs::remove_dir_all(&dir).unwrap();

@@ -1,4 +1,4 @@
-// The separate naming row is gone: the sources no longer hold its old words.
+//! The separate naming row is gone: the sources no longer hold its old words.
 
 #[test]
 fn the_separate_naming_row_is_gone() {

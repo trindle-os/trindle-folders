@@ -1,5 +1,4 @@
 // The one check every round i's words go through, so each program's i shuts the same way.
-
 use std::time::Instant;
 
 use crate::toolkit::input::{Button, Input, Keysym};

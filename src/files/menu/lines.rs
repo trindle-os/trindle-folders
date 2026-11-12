@@ -1,4 +1,4 @@
-// The rows each place and each kind of pick offers, before the least used are folded into sub-menus.
+//! The rows each place and each kind of pick offers, before the least used
 
 use std::path::PathBuf;
 
@@ -220,7 +220,7 @@ fn picture_rows(sel: &[Sel], mix: Mix) -> Vec<Line> {
     rows
 }
 
-pub fn view_lines(view: View, sort: usize, group: usize, up: bool, hidden: bool) -> Vec<Line> {
+pub fn view_lines(view: View, sort: usize, group: usize, up: bool) -> Vec<Line> {
     use crate::files::columns::Col;
     use crate::files::groups::GroupBy;
     let mark = |on: bool| if on { stand_in::TICKED } else { "" };
@@ -237,7 +237,6 @@ pub fn view_lines(view: View, sort: usize, group: usize, up: bool, hidden: bool)
     out.push(Line { rule: true, sub: sorts, ..line(Act::Sub(Kind::Sort), t!("folders-view-sort-by"), way, "") });
     out.push(Line { sub: groups, ..line(Act::Sub(Kind::Group), t!("folders-view-group-by"), "", "") });
     out.push(line(Act::Flip, t!("folders-view-sort-other-way"), way, ""));
-    out.push(Line { rule: true, ..line(Act::Hidden, t!("folders-view-show-hidden"), mark(hidden), "Ctrl+H") });
     out
 }
 

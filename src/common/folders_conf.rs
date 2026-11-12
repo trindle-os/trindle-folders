@@ -1,4 +1,4 @@
-// Folders' own settings, kept in Folders itself so it can be used on its own.
+//! Folders' own settings: they are in Folders itself and not in the
 
 use std::path::{Path, PathBuf};
 

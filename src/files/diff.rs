@@ -1,4 +1,4 @@
-// Two files compared side by side.
+//! Two files compared side by side.
 
 use std::io::{self, BufReader, Read};
 use std::path::Path;

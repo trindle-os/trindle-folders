@@ -1,4 +1,4 @@
-// Undo and redo.
+//! Undo and redo.
 
 use std::path::{Path, PathBuf};
 

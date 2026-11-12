@@ -1,4 +1,4 @@
-// Reading a place on this computer on a thread of its own.
+//! Reading a place on this computer on a thread of its own. A folder may be
 
 use std::collections::HashSet;
 use std::os::fd::OwnedFd;

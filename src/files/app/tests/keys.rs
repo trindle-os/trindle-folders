@@ -1,4 +1,4 @@
-// The keys Files answers, and what each does.
+//! The keys Files answers, and what each does.
 
 use std::time::Duration;
 

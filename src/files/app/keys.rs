@@ -1,4 +1,4 @@
-// The keys Files answers, and the input it looks at before the toolkit does.
+//! The keys Files answers, and the input it looks at before the toolkit does.
 
 use std::time::Instant;
 

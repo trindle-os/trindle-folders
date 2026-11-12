@@ -1,4 +1,4 @@
-// Taking a pane somewhere: Back and Forward, folders opened, files started, and the box to type a place in.
+//! Taking a pane somewhere: Back and Forward, folders opened, files started, and the box to type a place in.
 
 use std::path::{Path, PathBuf};
 
@@ -223,6 +223,9 @@ impl Files {
 
     pub(in crate::files) fn open(&mut self, p: usize, i: usize) {
         let Some(e) = self.cols[p].entries.get(i).cloned() else { return };
+        if self.as_root && (!e.folder || matches!(self.cols[p].at, Where::Inside(..))) {
+            return self.say(t!("folders-app-root-folders-only"), false);
+        }
         if let Where::Inside(..) = self.cols[p].at {
             self.inside_open(p, vec![e.path]);
         } else if !e.folder && crate::files::inside::opens(&e.path) {
@@ -243,6 +246,10 @@ impl Files {
     }
 
     pub(in crate::files) fn open_file(&mut self, path: &Path) -> bool {
+        if self.as_root {
+            self.say(t!("folders-app-root-folders-only"), false);
+            return false;
+        }
         let kind = self.mime.of_path(path);
         let opener = crate::common::apps::opener_for(&kind)
             .or_else(|| kind.starts_with("text/").then(|| crate::common::apps::opener_for("text/plain")).flatten());

@@ -1,11 +1,17 @@
 
+# machine translated (German), not yet reviewed by a person.
 
+# Line in a list of files a job could not do: the file's name, then in brackets why not.
 folders-jobs-failed-why = { $name } ({ $why })
 
-folders-jobs-refused-names = es hat weitere Namen
+# Why a wipe left a file alone, after its name in the failed list: it has other names (hard links).
+folders-jobs-refused-names = es ist auch unter anderen Namen gespeichert
 
-folders-jobs-refused-not-file = keine Datei
+# Why a wipe left something alone, after its name in the failed list: it is not a plain file.
+folders-jobs-refused-not-file = es ist keine Datei
 
-folders-jobs-refused-changed = es hat sich zwischenzeitlich geändert
+# Why a wipe left a file alone, after its name in the failed list: it changed while the wipe ran.
+folders-jobs-refused-changed = es hat sich während des sicheren Löschens geändert
 
-folders-jobs-refused-disk = der Datenträger hat es abgelehnt
+# Why a wipe left a file alone, after its name in the failed list: the disk refused.
+folders-jobs-refused-disk = Folders konnte es nicht sicher löschen

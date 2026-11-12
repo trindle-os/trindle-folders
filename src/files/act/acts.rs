@@ -1,4 +1,4 @@
-// The acts the keys and buttons start: copy, move, cut, paste, trash, delete, restore and make.
+//! The acts the keys and buttons start: copy, move, cut, paste, trash, delete, restore and make.
 
 use std::path::{Path, PathBuf};
 

@@ -1,4 +1,4 @@
-// USB the Linux way, with no libusb.
+//! USB the Linux way, with no libusb: phones are found by reading
 
 use std::fs::{File, OpenOptions};
 use std::io;

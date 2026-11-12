@@ -1,4 +1,4 @@
-// Logins kept and sent over several openings: when the card is asked, and when it is not.
+//! Logins kept and sent over several openings: when the card is asked, and when it is not.
 
 use std::path::PathBuf;
 
@@ -70,8 +70,8 @@ fn nothing_typed_goes_to_an_address_only_heard_until_the_card_has_shown_it() {
     let Some(Dialog::Share(a)) = &f.dialog else { panic!("no card: {}", f.said) };
     assert_eq!((a.address.as_deref(), a.user.as_str(), a.password.as_str()), (Some("10.0.0.66"), "jo", "right"));
     let said = view(a, 1).said();
-    assert!(said.iter().any(|s| s.contains("10.0.0.66") && s.contains("Any device on a network can answer to a name")), "{said:?}");
-    assert!(said.iter().any(|s| s.contains("goes to 10.0.0.66") && s.contains("kept for that address")), "{said:?}");
+    assert!(said.iter().any(|s| s.contains("10.0.0.66") && s.contains("Any device on a network can claim a name")), "{said:?}");
+    assert!(said.iter().any(|s| s.contains("goes to 10.0.0.66") && s.contains("keeps your login for this address only")), "{said:?}");
     found(&mut f, "10.0.0.77");
     f.update(Msg::Share(ShareMsg::Go));
     assert!(f.dialog.is_none(), "{}", f.said);
@@ -102,7 +102,7 @@ fn a_card_never_names_one_address_and_sends_to_another() {
     assert_eq!(a.address.as_deref(), Some("10.0.0.66"));
     assert!(said.contains("10.0.0.66") && !said.contains("10.0.0.77"), "the card names where it does not send: {said}");
     f.update(Msg::Share(ShareMsg::User("jo".into())));
-    f.update(Msg::Share(ShareMsg::Password("right".into())));
+    f.update(Msg::Share(ShareMsg::Password(String::from("right").into())));
     f.update(Msg::Share(ShareMsg::Go));
     assert!(pretend::sent().iter().all(|(_, ip, _)| ip.as_deref() != Some("10.0.0.77")), "{:?}", pretend::sent());
 }
@@ -132,7 +132,7 @@ fn a_held_login_waits_for_the_card_at_every_opening_of_an_address_only_heard() {
     assert!(said.contains("nas.invalid") && said.contains("10.0.0.2") && said.contains("goes to 10.0.0.2"), "{said}");
     assert!(!said.contains('\u{2014}'), "{said}");
     assert_eq!(a.why, again_words("nas.invalid", "10.0.0.2"));
-    assert!(a.why.contains("port 445") && a.why.contains("only heard on the network") && a.why.contains("has not been sent"), "{}", a.why);
+    assert!(a.why.contains("port 445") && a.why.contains("on the local network at 10.0.0.2") && a.why.contains("hasn't sent your login"), "{}", a.why);
     assert!(a.remember, "the keyring has it, and the switch says so");
     f.reload_all();
     assert!(pretend::sent().is_empty(), "{:?}", pretend::sent());
@@ -160,7 +160,7 @@ fn a_held_login_waits_for_the_card_at_every_opening_of_an_address_only_heard() {
     assert_eq!(f.cols[p].tabs[0].at, Where::Folder(pretend::folder("Photos")));
     f.update(Msg::Share(ShareMsg::Eject(0)));
     open(&mut f);
-    f.update(Msg::Share(ShareMsg::Password("wrong".into())));
+    f.update(Msg::Share(ShareMsg::Password(String::from("wrong").into())));
     f.update(Msg::Share(ShareMsg::Go));
     let Some(Dialog::Share(a)) = &f.dialog else { panic!("the card closed") };
     assert!(a.failed && a.address.as_deref() == Some("10.0.0.2"));

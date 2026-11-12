@@ -1,4 +1,4 @@
-// Tests of reading and writing ID3 tags.
+//! Tests of reading and writing ID3 tags.
 
 use std::fs;
 use std::os::unix::fs::PermissionsExt;

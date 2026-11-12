@@ -1,4 +1,4 @@
-// The built-in viewer: a picture or a text file shown over the window, without opening another app.
+//! The built-in viewer: a picture or a text file shown over the window,
 
 use std::cell::RefCell;
 use std::path::PathBuf;
@@ -318,6 +318,9 @@ impl Files {
     }
 
     fn preview_with(&mut self, p: usize, i: usize, key: Option<super::archive::Key>) {
+        if self.as_root {
+            return self.say(t!("folders-app-root-folders-only"), false);
+        }
         let pane = &self.cols[p];
         let Some(e) = pane.entries.get(i) else { return };
         let (file, id) = (e.path.clone(), NEXT.fetch_add(1, Ordering::Relaxed));
@@ -331,8 +334,8 @@ impl Files {
                 return self.unlock_ask(a.clone(), super::locked::Then::View(p, file), None);
             }
         }
-        let copy = inside.as_ref().map(|(_, n)| copy_dir().join(n.rsplit('/').next().unwrap_or(n)));
-        let closed = key.as_ref().map(|_| Arc::new(AtomicBool::new(false)));
+        let copy = inside.as_ref().map(|(_, n)| copy_dir().join(format!("{id}-{}", n.rsplit('/').next().unwrap_or(n))));
+        let closed = copy.as_ref().map(|_| Arc::new(AtomicBool::new(false)));
         let pv = Preview { file: file.clone(), pane: p, id, seen: Seen::Loading, room: self.room, copy: copy.clone(), fitted: Default::default(),
                            ticking: None, closed: closed.clone() };
         self.dialog = Some(Dialog::Preview(pv));
@@ -341,8 +344,8 @@ impl Files {
         } else if let (Some((a, name)), Some(copy)) = (inside, copy) {
             self.preview_load(id, move || {
                 let _ = std::fs::create_dir_all(copy_dir());
-                let _ = super::archive::read(&a, key.as_ref(), &name, INSIDE_MOST).and_then(|b| std::fs::write(&copy, b));
-                if closed.is_some_and(|c| c.load(Ordering::Relaxed)) {
+                let written = super::archive::read(&a, key.as_ref(), &name, INSIDE_MOST).and_then(|b| std::fs::write(&copy, b));
+                if written.is_err() || closed.is_some_and(|c| c.load(Ordering::Relaxed)) {
                     let _ = std::fs::remove_file(&copy);
                 }
                 copy
@@ -365,6 +368,15 @@ fn keep_time(post: Post<Msg>, on: Arc<AtomicBool>, wake: Arc<AtomicBool>, id: u6
             if last.elapsed() >= SECOND {
                 last = std::time::Instant::now();
             }
+        }
+    });
+}
+
+pub(super) fn forget_viewed() {
+    let base = copy_dir();
+    std::thread::spawn(move || {
+        if std::fs::symlink_metadata(&base).is_ok_and(|m| m.is_dir()) {
+            let _ = std::fs::remove_dir_all(&base);
         }
     });
 }
@@ -715,7 +727,7 @@ mod tests {
             let b = at(&f, "b.flac");
             f.update(Msg::Choose(0, b));
             f.update(Msg::Preview(PreviewMsg::Toggle));
-            assert!(matches!(&f.dialog, Some(Dialog::Preview(pv)) if matches!(&pv.seen, Seen::Trouble(w) if w.starts_with("This cannot be played"))));
+            assert!(matches!(&f.dialog, Some(Dialog::Preview(pv)) if matches!(&pv.seen, Seen::Trouble(w) if w.starts_with("Folders can't play this"))));
             f.update(Msg::Preview(PreviewMsg::Space));
             assert!(f.dialog.is_none());
         }

@@ -1,4 +1,4 @@
-// The walk of a piece of work that reaches a server: finding each thing, asking what must be asked, and handing each file to the crew.
+//! The walk of a piece of work that reaches a server: finding each thing, asking what must be asked, and handing each file to the crew.
 
 use std::collections::HashSet;
 use std::fs::File;

@@ -1,8 +1,7 @@
-// Starting other programs without blocking, with the work handed back to the main thread.
+//! Non-blocking process spawning. Work done off the main thread and handed
 
 use std::io::{Read, Write};
 use std::process::{Command, Stdio};
-use std::sync::{Arc, Mutex};
 
 use zeroize::Zeroizing;
 
@@ -33,40 +32,19 @@ pub fn spawn(argv: &[&str]) -> bool {
     true
 }
 
-#[derive(Clone)]
-pub struct Proc {
-    gone: Arc<Mutex<bool>>,
-}
-
-impl Proc {
-}
-
-impl Proc {
-}
-
-pub fn child(mut command: Command, ended: impl FnOnce(i32) + 'static) -> Option<Proc> {
+pub fn child(mut command: Command, ended: impl FnOnce(i32) + 'static) -> bool {
     let mut child = match command.spawn() {
         Ok(child) => child,
         Err(e) => {
             eprintln!("trindle: could not run {}: {e}", command.get_program().to_string_lossy());
-            return None;
+            return false;
         }
     };
-    let proc = Proc { gone: Arc::new(Mutex::new(false)) };
-    let gone = proc.gone.clone();
     on_thread(move || {
         use std::os::unix::process::ExitStatusExt;
-        settled(&mut child, &gone).map(|s| s.into_raw()).unwrap_or(0)
+        child.wait().map(|s| s.into_raw()).unwrap_or(0)
     }, ended);
-    Some(proc)
-}
-
-fn settled(child: &mut std::process::Child, gone: &Mutex<bool>) -> Option<std::process::ExitStatus> {
-    let mut info: libc::siginfo_t = unsafe { std::mem::zeroed() };
-    unsafe { libc::waitid(libc::P_PID, child.id(), &mut info, libc::WEXITED | libc::WNOWAIT) };
-    let mut gone = gone.lock().unwrap_or_else(|e| e.into_inner());
-    *gone = true;
-    child.wait().ok()
+    true
 }
 
 pub fn captured(argv: &[String], stdin: Option<String>) -> (bool, String, String) {
@@ -137,7 +115,7 @@ pub fn admin_helper() -> String {
 }
 
 #[cfg(test)]
-pub const NO_PASSWORD: &str = "Not done: no administrator's password was given.";
+pub const NO_PASSWORD: &str = "That wasn't done because you didn't enter the administrator's password.";
 
 fn asks_polkit(program: &str) {
     if program == "pkexec" || program.ends_with("/pkexec") {
@@ -182,7 +160,7 @@ mod tests {
             let said = admin_error(silent);
             assert_ne!(said, NO_PASSWORD, "{silent:?}");
             assert_eq!(crate::common::refused::of_words(&said), None, "no refusal is read into it");
-            assert!(said.starts_with("Not done") && said.ends_with('.'), "{said}");
+            assert!(said.starts_with("That didn't work") && said.ends_with('.'), "{said}");
         }
         assert_eq!(admin_error("Error executing command as another user: Request dismissed"), NO_PASSWORD);
     }
@@ -192,7 +170,7 @@ mod tests {
         use std::os::unix::process::ExitStatusExt;
         for (script, crashed) in [("kill -SEGV $$", true), ("true", false)] {
             let mut child = Command::new("sh").args(["-c", script]).spawn().unwrap();
-            let status = settled(&mut child, &Mutex::new(false)).map(|s| s.into_raw()).unwrap_or(0);
+            let status = child.wait().unwrap().into_raw();
             assert_eq!((status & 0x7f) != 0, crashed, "{script}");
         }
     }

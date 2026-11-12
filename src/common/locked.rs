@@ -1,4 +1,4 @@
-// Whether this login's screen is locked, as a small file the compositor keeps in the login's runtime folder.
+//! Whether this login's screen is locked, as a small file the compositor
 
 use std::path::PathBuf;
 

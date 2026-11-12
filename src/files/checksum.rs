@@ -1,4 +1,4 @@
-// A file's checksums, as websites print them beside a download so it can be checked.
+//! A file's checksums, as websites print them beside a download so it can
 
 use std::io::{self, Read};
 use std::path::Path;

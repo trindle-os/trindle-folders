@@ -1,4 +1,4 @@
-// The child's frames as they arrive, each checked.
+//! The child's frames as they arrive, each checked.
 
 use std::io::{self, BufReader, Read};
 

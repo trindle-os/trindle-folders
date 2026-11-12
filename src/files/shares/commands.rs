@@ -1,4 +1,4 @@
-// The command lines that list and mount shares, which hold no login, and the words for an NFS server's trouble.
+//! The command lines that list and mount shares, which hold no login, and the words for an NFS server's trouble.
 
 use zeroize::Zeroizing;
 
@@ -54,10 +54,14 @@ pub fn nfs_words(problem: &Problem, server: &str, export: &str) -> String {
     }
 }
 
+#[cfg(not(test))]
 fn me() -> String {
+    let mut buf = vec![0u8; 16 * 1024];
     let name = unsafe {
-        let p = libc::getpwuid(libc::getuid());
-        (!p.is_null()).then(|| std::ffi::CStr::from_ptr((*p).pw_name).to_string_lossy().into_owned())
+        let mut entry: libc::passwd = std::mem::zeroed();
+        let mut p: *mut libc::passwd = std::ptr::null_mut();
+        let ok = libc::getpwuid_r(libc::getuid(), &mut entry, buf.as_mut_ptr().cast(), buf.len(), &mut p) == 0 && !p.is_null();
+        ok.then(|| std::ffi::CStr::from_ptr((*p).pw_name).to_string_lossy().into_owned())
     };
     name.unwrap_or_else(crate::common::files::user)
 }
@@ -70,6 +74,5 @@ pub(super) fn mounted_now() -> Option<Vec<Mounted>> {
 
 #[cfg(test)]
 pub(super) fn mounted_now() -> Option<Vec<Mounted>> {
-    let _ = me;
     None
 }

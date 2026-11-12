@@ -1,4 +1,4 @@
-// The window as a person meets it, for tests that press keys and click.
+//! The window as a person meets it, for tests that press keys and click.
 
 use super::*;
 

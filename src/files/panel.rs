@@ -1,4 +1,4 @@
-// The preview panel: a panel at the right of the window that stays open and follows whatever is chosen in the active pane.
+//! The preview panel at the right of the window, following whatever is chosen in the active pane.
 
 use std::cell::RefCell;
 use std::path::{Path, PathBuf};
@@ -186,7 +186,7 @@ impl Files {
     }
 
     pub(super) fn panel_shows(&self) -> bool {
-        self.kept.panel && self.panel_room().is_some()
+        self.kept.panel && self.panel_room().is_some() && !self.as_root
     }
 
     fn panel_keep(&mut self) {
@@ -685,11 +685,11 @@ mod tests {
         f.update(Msg::Panel(PanelMsg::Switch));
         pick(&mut f, 0, &["Letters"]);
         assert_eq!(f.panel_shown().unwrap().0, "Letters");
-        assert!(f.panel_shown().unwrap().1.iter().all(|(k, w)| *k != "Kind" && !w.eq_ignore_ascii_case("folder")), "{:?}", f.panel_shown().unwrap().1);
+        assert!(f.panel_shown().unwrap().1.iter().all(|(k, w)| *k != "Type" && !w.eq_ignore_ascii_case("folder")), "{:?}", f.panel_shown().unwrap().1);
         f.update(Msg::Unpick);
-        assert!(f.panel_shown().unwrap().1.iter().all(|(k, w)| *k != "Kind" && !w.eq_ignore_ascii_case("folder")), "{:?}", f.panel_shown().unwrap().1);
+        assert!(f.panel_shown().unwrap().1.iter().all(|(k, w)| *k != "Type" && !w.eq_ignore_ascii_case("folder")), "{:?}", f.panel_shown().unwrap().1);
         pick(&mut f, 0, &["beach.png"]);
-        assert!(fact(&f, "Kind").is_none(), "beach.png: the ending says it is a PNG image, so the panel does not");
+        assert!(fact(&f, "Type").is_none(), "beach.png: the ending says it is a PNG image, so the panel does not");
         assert_eq!(crate::files::kinds::said_kind_beside(false, "beach.png", || "PNG image".into()), "");
         assert_eq!(crate::files::kinds::said_kind_beside(false, "notes.txt", || "Plain text document".into()), "");
         assert_eq!(crate::files::kinds::said_kind_beside(true, "Letters", || "Folder".into()), "");
@@ -710,13 +710,13 @@ mod tests {
         let (name, _, seen) = f.panel_shown().unwrap();
         assert_eq!((name.as_str(), seen.as_str()), ("beach.png", "picture 300x100"));
         assert_eq!(fact(&f, "Pixels").as_deref(), Some("300 by 100"));
-        assert!(fact(&f, "Size").is_some() && fact(&f, "Kind").is_none() && fact(&f, "Changed").is_some(), "the ending says what kind it is");
+        assert!(fact(&f, "Size").is_some() && fact(&f, "Type").is_none() && fact(&f, "Changed").is_some(), "the ending says what kind it is");
         assert!(fact(&f, "Where").is_some_and(|w| w.ends_with(&dir.display().to_string()) || w.starts_with("Home")));
         pick(&mut f, 0, &["notes.txt"]);
         assert!(f.panel_shown().unwrap().2.starts_with("text first line\nsecond line\n[31mthird line\na made-up line"), "{}", f.panel_shown().unwrap().2);
         pick(&mut f, 0, &["Letters"]);
         assert_eq!(f.panel_shown().unwrap().2, "plain");
-        assert_eq!((fact(&f, "Holds").as_deref(), fact(&f, "Size").as_deref()), (Some("3 items in all"), Some("3.0 KB")));
+        assert_eq!((fact(&f, "Contains").as_deref(), fact(&f, "Size").as_deref()), (Some("3 items in all"), Some("3.0 KB")));
         pick(&mut f, 0, &["beach.png", "notes.txt"]);
         let (name, facts, _) = f.panel_shown().unwrap();
         assert_eq!(name, "2 selected");
@@ -724,7 +724,7 @@ mod tests {
         f.update(Msg::Unpick);
         let (name, _, _) = f.panel_shown().unwrap();
         assert_eq!(name, f.place_name(&Where::Folder(dir.clone())));
-        assert_eq!(fact(&f, "Holds").as_deref(), Some("6 items in all"));
+        assert_eq!(fact(&f, "Contains").as_deref(), Some("6 items in all"));
         pick(&mut f, 0, &["beach.png"]);
         f.update(Msg::Preview(PreviewMsg::Toggle));
         assert!(matches!(f.dialog, Some(crate::files::dialogs::Dialog::Preview(_))));
@@ -884,7 +884,7 @@ mod tests {
         f.update(Msg::Panel(PanelMsg::Switch));
         pick(&mut f, 0, &["letters.zip"]);
         assert_eq!(fact(&f, "Unpacked").as_deref(), Some("3.0 KB"));
-        assert!(fact(&f, "Holds").is_some_and(|h| h.ends_with("items")));
+        assert!(fact(&f, "Contains").is_some_and(|h| h.ends_with("items")));
         let _ = std::fs::remove_dir_all(dir);
     }
 }

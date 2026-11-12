@@ -1,4 +1,4 @@
-// Pictures of the main window: its views, tabs, menus and cards, the list and what is picked, and work under way.
+//! Pictures of the main window: its views, tabs, menus and cards, the list
 
 use std::path::{Path, PathBuf};
 
@@ -23,7 +23,7 @@ fn shoot_password_card() {
     let archive = std::env::temp_dir().join("holiday photos.7z");
     f.unlock_ask(archive.clone(), Then::Unpack(Place::Here, std::env::temp_dir()), None);
     shoot("w-password", &f);
-    f.update(Msg::Unlock(UnlockMsg::Password("john-smith".into())));
+    f.update(Msg::Unlock(UnlockMsg::Password(String::from("john-smith").into())));
     shoot("w1-password-typed", &f);
     f.dialog = None;
     f.unlock_ask(archive.clone(), Then::List, Some(Trouble::WrongKey));

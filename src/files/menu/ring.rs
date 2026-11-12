@@ -1,4 +1,4 @@
-// Pinning a folder or a file to the ring, beside the favourite apps.
+//! Pinning a folder or a file to the ring, beside the favourite apps.
 
 use std::path::Path;
 

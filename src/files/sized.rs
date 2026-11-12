@@ -1,4 +1,4 @@
-// Folder sizes: every folder in a shown Size column, and every folder picked, is measured on the sizes engine's thread.
+//! Folder sizes: every folder in a shown Size column, and every folder
 
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};

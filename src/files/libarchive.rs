@@ -1,4 +1,4 @@
-// The system's libarchive, used for archives Trindle does not read itself.
+//! The system's libarchive, used for archives Trindle does not read itself.
 
 use std::ffi::{c_char, c_int, c_void, CStr, CString};
 use std::os::unix::ffi::OsStrExt;
@@ -44,9 +44,6 @@ struct Lib {
     mtime_is_set: Setup,
     data_encrypted: Setup,
 }
-
-unsafe impl Send for Lib {}
-unsafe impl Sync for Lib {}
 
 const FORMATS: [&CStr; 11] = [
     c"archive_read_support_format_rar",
@@ -273,15 +270,16 @@ impl Reader {
     }
 
     pub fn data(&mut self, buf: &mut [u8]) -> Result<usize, Fault> {
-        loop {
+        for _ in 0..=8 {
             let n = unsafe { (self.lib.read_data)(self.a, buf.as_mut_ptr().cast(), buf.len()) };
             if n >= 0 {
                 return Ok(n as usize);
             }
             if n != RETRY as isize {
-                return Err(self.fault());
+                break;
             }
         }
+        Err(self.fault())
     }
 
     pub fn eaten(&self) -> u64 {

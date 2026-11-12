@@ -1,4 +1,4 @@
-// Files of `[Group]` headings and `key=value` lines, as desktop entries, plugin.ini and GTK's settings.ini are written.
+//! Files of `[Group]` headings and `key=value` lines, as desktop entries,
 
 use std::path::Path;
 

@@ -1,4 +1,4 @@
-// Tests of Files' side of servers and phones.
+//! Tests of Files' side of servers and phones.
 
 use std::fs;
 use std::path::{Path, PathBuf};

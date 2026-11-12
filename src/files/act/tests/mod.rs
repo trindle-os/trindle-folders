@@ -1,4 +1,4 @@
-// Tests of what Files does to files.
+//! Tests of what Files does to files.
 
 use std::fs;
 use std::path::{Path, PathBuf};

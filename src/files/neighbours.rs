@@ -1,4 +1,4 @@
-// The computers on the home network that share folders, under Network.
+//! The computers on the home network that share folders, under Network: Windows computers by WS-Discovery (asked of trindle-wsdd) and others by multicast DNS (nearby.rs), merged into one list.
 
 use std::collections::HashSet;
 use std::io::{self, Read, Write};
@@ -341,7 +341,7 @@ mod tests {
         assert_eq!(f.picked_total(0), (1, 0, false));
         f.open(0, i);
         assert_eq!(f.cols[0].tabs[0].at, Where::Remote("smb://NAS/".into()));
-        assert!(f.said.contains("No computer called NAS"), "{}", f.said);
+        assert!(f.said.contains("find a computer called NAS"), "{}", f.said);
         assert_eq!(f.cols[0].tabs[0].at.up(), Some(Where::Network));
     }
 
@@ -374,23 +374,23 @@ mod tests {
         use super::super::nearby::Asked;
         let mut f = Files::new(Vec::new());
         f.go(0, Where::Network);
-        let last = "can still be opened by its name or address.";
+        let last = "you can still open it by its name or address.";
         assert!(f.near.words().starts_with("No computers sharing folders were found on this network.") && f.near.words().ends_with(last));
         (f.near.finder, f.near.announced) = (Way::Asking, Way::Asking);
-        assert_eq!(f.near.words(), "Looking for computers on this network that share folders.");
+        assert_eq!(f.near.words(), "Looking for computers on this network that share folders…");
         f.update(Msg::Looked(Looked::Finder(true)));
         assert!(f.near.looking(), "one way is still asking");
         f.update(Msg::Looked(Looked::Announced(Asked::Yes)));
         assert!(!f.near.looking());
-        assert!(f.near.words().contains("Folders asked the Windows way, and the way a NAS, a Mac or Linux answers."), "{}", f.near.words());
+        assert!(f.near.words().contains("Folders looked for Windows computers, and for NAS drives, Macs and Linux computers."), "{}", f.near.words());
         f.update(Msg::Looked(Looked::Finder(false)));
         let words = f.near.words();
-        assert!(words.contains("Folders asked the way a NAS, a Mac or Linux answers.") && words.contains("trindle-wsdd") && words.ends_with(last), "{words}");
+        assert!(words.contains("Folders looked for NAS drives, Macs and Linux computers.") && words.contains("trindle-wsdd") && words.ends_with(last), "{words}");
         f.update(Msg::Looked(Looked::Announced(Asked::NoCard)));
-        assert!(f.near.words().contains("No network card that can be asked is connected"), "{}", f.near.words());
-        assert!(!f.near.words().contains("Folders asked"), "{}", f.near.words());
+        assert!(f.near.words().contains("because this computer isn't connected to a network"), "{}", f.near.words());
+        assert!(!f.near.words().contains("Folders looked for"), "{}", f.near.words());
         f.update(Msg::Looked(Looked::Announced(Asked::Refused("Operation not permitted".into()))));
-        assert!(f.near.words().contains("The network would not take the question (Operation not permitted)."), "{}", f.near.words());
+        assert!(f.near.words().contains("Folders couldn't look for NAS drives, Macs and Linux computers (Operation not permitted)."), "{}", f.near.words());
         let said = super::super::view::view(&f).said();
         assert!(said.contains(&f.near.words()) && said.contains(&"button: Connect to a server".to_string()), "{said:?}");
         f.update(Msg::Announced(vec![Computer { name: "NAS".into(), address: None }]));

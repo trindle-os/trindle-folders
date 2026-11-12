@@ -1,4 +1,4 @@
-// Unpacking an archive, the one place the rules for a stranger's files are kept.
+//! Unpacking an archive, the one place the rules for a stranger's files are kept.
 
 use std::collections::HashSet;
 use std::ffi::OsStr;
@@ -234,7 +234,7 @@ impl<'t> Laid<'t> {
             let mut out = gentle::Out::new(OpenOptions::new().write(true).create_new(true).mode(0o666).open(&path)?, &|_| {});
             gentle::pour(&mut Rationed { inner: r, left: &mut self.room_left }, &mut out, &mut || true)?;
             if let Some(m) = item.mode {
-                out.file().set_permissions(fs::Permissions::from_mode(m & 0o777))?;
+                out.file().set_permissions(fs::Permissions::from_mode(m & 0o777 & !umask()))?;
             }
             if let Some(t) = item.modified {
                 out.file().set_times(FileTimes::new().set_modified(time_of(t)))?;
@@ -289,9 +289,18 @@ fn place(archive: &Path, into: &Path, temp: &Path, chosen: Option<Vec<Vec<String
                 if fs::symlink_metadata(&from).is_err() {
                     continue;
                 }
-                let to = put(&from, into, &r[r.len() - 1])?;
-                placed.push((r, to.clone()));
-                made.push(to);
+                match put(&from, into, &r[r.len() - 1]) {
+                    Ok(to) => {
+                        placed.push((r, to.clone()));
+                        made.push(to);
+                    }
+                    Err(e) => {
+                        for (r, to) in placed.iter().rev() {
+                            let _ = crate::common::files::rename_new(to, &joined(temp, r));
+                        }
+                        return Err(e);
+                    }
+                }
             }
             fs::remove_dir_all(temp)?;
         }
@@ -299,17 +308,26 @@ fn place(archive: &Path, into: &Path, temp: &Path, chosen: Option<Vec<Vec<String
     Ok((made, placed))
 }
 
+pub(super) fn umask() -> u32 {
+    static MASK: std::sync::OnceLock<u32> = std::sync::OnceLock::new();
+    *MASK.get_or_init(|| {
+        fs::read_to_string("/proc/self/status").ok()
+            .and_then(|s| s.lines().find_map(|l| l.strip_prefix("Umask:")).and_then(|m| u32::from_str_radix(m.trim(), 8).ok()))
+            .unwrap_or(0o022)
+    })
+}
+
 fn set_folder_marks(mut folders: Vec<Folder>, placed: &Placed) {
     folders.sort_by_key(|f| std::cmp::Reverse(f.0.len()));
     for (comps, mode, modified) in folders {
         let Some((root, to)) = placed.iter().filter(|(r, _)| comps.starts_with(r)).max_by_key(|(r, _)| r.len()) else { continue };
         let path = joined(to, &comps[root.len()..]);
+        let Ok(f) = OpenOptions::new().read(true).custom_flags(libc::O_NONBLOCK | libc::O_NOFOLLOW | libc::O_DIRECTORY).open(&path) else { continue };
         if let Some(m) = mode {
-            let _ = fs::set_permissions(&path, fs::Permissions::from_mode((m & 0o777) | 0o700));
+            let _ = f.set_permissions(fs::Permissions::from_mode((m & 0o777 & !umask()) | 0o700));
         }
         if let Some(t) = modified {
-            let _ = OpenOptions::new().read(true).custom_flags(libc::O_NONBLOCK | libc::O_NOFOLLOW).open(&path)
-                .and_then(|f| f.set_times(FileTimes::new().set_modified(time_of(t))));
+            let _ = f.set_times(FileTimes::new().set_modified(time_of(t)));
         }
     }
 }
@@ -358,6 +376,10 @@ fn put_folder(from: &Path, into: &Path, name: &str) -> io::Result<PathBuf> {
 }
 
 fn put(from: &Path, into: &Path, name: &str) -> io::Result<PathBuf> {
+    #[cfg(test)]
+    if name.contains("cannot-be-placed") {
+        return Err(io::Error::other("made to fail"));
+    }
     if fs::symlink_metadata(from)?.file_type().is_dir() {
         return put_folder(from, into, name);
     }

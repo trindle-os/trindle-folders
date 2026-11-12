@@ -1,4 +1,4 @@
-// Letting things go: where they may go, and what is done there.
+//! Letting things go: where they may go, and what is done there.
 
 use std::path::{Path, PathBuf};
 

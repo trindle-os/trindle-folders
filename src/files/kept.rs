@@ -1,4 +1,4 @@
-// What Files remembers about single folders and files: the colour a folder was given and the view a folder was last shown in.
+//! What Files remembers about single folders and files: the colour a
 
 use std::collections::HashMap;
 use std::ffi::OsString;

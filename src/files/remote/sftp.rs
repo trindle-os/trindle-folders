@@ -1,4 +1,4 @@
-// SFTP, version 3 (the one OpenSSH speaks), in Trindle's own Rust.
+//! SFTP, version 3 (the one OpenSSH speaks), in Trindle's own Rust. The
 
 use std::collections::{BTreeMap, HashMap};
 use std::io::{self, Read, Write};
@@ -41,7 +41,6 @@ const FX_OP_UNSUPPORTED: u32 = 8;
 const OPEN_READ: u32 = 0x01;
 const OPEN_WRITE: u32 = 0x02;
 const OPEN_CREAT: u32 = 0x08;
-const OPEN_TRUNC: u32 = 0x10;
 const OPEN_EXCL: u32 = 0x20;
 
 const ATTR_SIZE: u32 = 0x01;
@@ -179,6 +178,8 @@ impl Out {
 
 pub(super) struct In<'a>(&'a [u8]);
 
+const MOST_NAMES: usize = if cfg!(test) { 3000 } else { 1_000_000 };
+
 fn garbled() -> Error {
     Error::Lost(t!("folders-remote-sftp-nonsense").into())
 }
@@ -306,8 +307,9 @@ impl Pieces {
         Some(piece)
     }
 
-    pub(super) fn came(&mut self, at: u64, asked: u32, data: Option<Vec<u8>>) {
+    pub(super) fn came(&mut self, at: u64, asked: u32, data: Option<Vec<u8>>) -> Result<(), Error> {
         match data {
+            Some(d) if d.len() as u64 > asked as u64 => return Err(garbled()),
             Some(d) if !d.is_empty() => {
                 if (d.len() as u64) < asked as u64 {
                     self.again.push((at + d.len() as u64, asked - d.len() as u32));
@@ -316,6 +318,7 @@ impl Pieces {
             }
             _ => self.eof = Some(self.eof.map_or(at, |e| e.min(at))),
         }
+        Ok(())
     }
 
     pub(super) fn ready(&mut self) -> Vec<Vec<u8>> {
@@ -354,7 +357,7 @@ impl Sftp {
             _ => Error::Io(e),
         })?;
         let said = Arc::new(Mutex::new(String::new()));
-        if let Some(mut err) = child.stderr.take() {
+        let reader = child.stderr.take().map(|mut err| {
             let said = said.clone();
             std::thread::spawn(move || {
                 let mut buf = [0u8; 1024];
@@ -368,8 +371,8 @@ impl Sftp {
                         }
                     }
                 }
-            });
-        }
+            })
+        });
         let (to, from) = match (child.stdin.take(), child.stdout.take()) {
             (Some(i), Some(o)) => (i, o),
             _ => return Err(Error::Failed(t!("folders-remote-sftp-ssh-failed").into())),
@@ -383,7 +386,10 @@ impl Sftp {
             Err(e) => {
                 let _ = child.kill();
                 let _ = child.wait();
-                std::thread::sleep(std::time::Duration::from_millis(50));
+                let until = std::time::Instant::now() + std::time::Duration::from_secs(2);
+                while reader.as_ref().is_some_and(|r| !r.is_finished()) && std::time::Instant::now() < until {
+                    std::thread::sleep(std::time::Duration::from_millis(5));
+                }
                 let said = said.lock().map(|s| s.clone()).unwrap_or_default();
                 Err(why(&said, &address.host, login).unwrap_or(e))
             }
@@ -605,6 +611,7 @@ impl Remote for Sftp {
             match self.ask(READDIR, |o| {
                 o.bytes(&h);
             }) {
+                Ok(Reply::Name(_)) if out.len() >= MOST_NAMES => break Err(super::too_much()),
                 Ok(Reply::Name(names)) => {
                     for (name, a) in names {
                         if name != "." && name != ".." {
@@ -663,8 +670,8 @@ impl Remote for Sftp {
                 break;
             };
             match reply {
-                Reply::Data(d) => pieces.came(at, len, Some(d)),
-                Reply::Status(FX_EOF, _) => pieces.came(at, len, None),
+                Reply::Data(d) => failed = pieces.came(at, len, Some(d)).err(),
+                Reply::Status(FX_EOF, _) => failed = pieces.came(at, len, None).err(),
                 Reply::Status(code, msg) => failed = Some(status(code, &msg, path)),
                 _ => failed = Some(garbled()),
             }
@@ -685,10 +692,6 @@ impl Remote for Sftp {
         }
         closed?;
         Ok(pieces.written())
-    }
-
-    fn write(&mut self, path: &str, from: &mut dyn Read, size: u64, progress: Progress) -> Result<u64, Error> {
-        self.write_as(path, from, size, progress, OPEN_WRITE | OPEN_CREAT | OPEN_TRUNC)
     }
 
     fn write_new(&mut self, path: &str, from: &mut dyn Read, size: u64, progress: Progress) -> Result<u64, Error> {
@@ -836,7 +839,7 @@ fn why(said: &str, host: &str, login: &Login) -> Option<Error> {
     } else if has("No route to host") || has("Network is unreachable") {
         Error::Unreachable(t!("folders-remote-sftp-no-way", host = host))
     } else if has("subsystem request failed") {
-        Error::NotSupported(t!("folders-remote-sftp-none-here").into())
+        Error::Failed(t!("folders-remote-sftp-none-here").into())
     } else {
         let last = said.lines().map(str::trim).rfind(|l| !l.is_empty())?;
         Error::Failed(t!("folders-remote-sftp-ssh-said", said = last))

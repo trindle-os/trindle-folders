@@ -1,4 +1,4 @@
-// Hidden file endings in the list and in the rename box.
+//! Hidden file endings in the list and in the rename box.
 
 use super::*;
 
@@ -59,7 +59,7 @@ fn endings_are_kept_in_the_box(b: &mut Bench, dir: &Path, p: usize, what: &str) 
     b.f.update(Msg::RenameText(String::new()));
     b.f.update(Msg::RenameDone);
     b.show();
-    assert_eq!(b.f.renaming.as_ref().and_then(|r| r.why.as_deref()), Some("A name cannot be empty."), "{what}");
+    assert_eq!(b.f.renaming.as_ref().and_then(|r| r.why.as_deref()), Some("Type a name."), "{what}");
     assert!(here.join("letter.txt").is_file() && !here.join(".txt").exists(), "{what}");
     b.key(Keysym::Escape);
     b.pick(p, "archive.tar.gz");

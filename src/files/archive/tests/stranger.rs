@@ -1,4 +1,4 @@
-// Archives made to do harm get nowhere: nothing leaves the folder asked for.
+//! Archives made to do harm get nowhere: nothing leaves the folder asked for.
 
 use super::*;
 
@@ -107,7 +107,7 @@ fn devices_owners_and_borrowed_rights_are_never_brought_back() {
         assert_eq!(meta("root-shell").mode() & 0o7777, 0o755, "{name}: the set-user and set-group bits are gone");
         assert_eq!(meta("sticky").mode() & 0o7777, 0o644, "{name}");
         assert_eq!(meta("plain.txt").mode() & 0o7777, 0o640, "{name}");
-        assert_eq!(meta("").mode() & 0o7777, 0o777, "{name}: nor are a folder's");
+        assert_eq!(meta("").mode() & 0o7777, 0o777 & !crate::files::archive::unpack::umask(), "{name}: nor are a folder's, and the umask holds");
         assert!(["", "root-shell", "sticky", "plain.txt"].iter().all(|p| meta(p).uid() == me), "{name}: whoever unpacks owns it all");
         assert!(!out.join("box/null").exists() && !out.join("box/pipe").exists(), "{name}: no device and no pipe");
         assert_eq!(fs::read_dir(out.join("box")).unwrap().count(), 3, "{name}");
@@ -162,7 +162,7 @@ fn an_archive_made_to_fill_the_disk_or_bury_a_folder_is_stopped() {
         assert!(fs::metadata(&arc).unwrap().len() < 100_000);
         let most = Most { things: MOST_THINGS, bytes: 1 << 20 };
         let e = unpack(&arc, None, &out, Taking { need: Need::All, want: &|_| true, roots: Roots::Together, most }, &stop, &quiet).unwrap_err();
-        assert_eq!(why(&e), "there is not room here for what it holds", "{format:?}");
+        assert_eq!(why(&e), "there isn't enough space here for what's in it", "{format:?}");
         assert_eq!(fs::read_dir(&out).unwrap().count(), 0, "{format:?}: nothing is left");
     }
     let noughts = vec![0u8; 3 << 20];
@@ -190,6 +190,6 @@ fn an_archive_made_to_fill_the_disk_or_bury_a_folder_is_stopped() {
     let free = crate::common::files::room_left(&dir).unwrap();
     assert_eq!(real.things, 1_000_000);
     assert!(real.bytes < free && free - real.bytes <= ROOM_KEPT + (64 << 20), "{} of {free}", real.bytes);
-    assert_eq!(why(&trouble(Trouble::TooMany)), "it holds more than a million things, more than Folders will unpack");
+    assert_eq!(why(&trouble(Trouble::TooMany)), "it has more than a million items, which is too many for Folders to unpack");
     let _ = fs::remove_dir_all(&dir);
 }

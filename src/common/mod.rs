@@ -1,4 +1,4 @@
-// The shared pieces Folders carries with it, copied small from Trindle and the toolkit.
+//! The shared pieces Folders carries with it, copied small from Trindle and the toolkit.
 
 pub use crate::toolkit::common::file_work::gentle;
 pub use crate::toolkit::common::{selection, ui};
@@ -48,6 +48,8 @@ pub mod jobs_say_why;
 pub mod no_writing_in_place;
 #[cfg(test)]
 pub mod info_popup_tests;
+#[cfg(test)]
+mod languages_agree;
 #[cfg(test)]
 pub use crate::toolkit::common::needs;
 #[cfg(test)]

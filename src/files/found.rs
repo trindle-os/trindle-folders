@@ -1,4 +1,4 @@
-// The quick filter and the search box over a pane.
+//! The quick filter and the search. A box over a pane narrows what it
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -350,7 +350,7 @@ mod tests {
         f.update(pick_kind(Kind::Pictures));
         f.update(Msg::Find(FindMsg::Search(false)));
         assert_eq!(f.cols[0].at, Where::Found(dir.to_path_buf(), String::new(), false));
-        assert_eq!(f.cols[0].at.name(&f.home), "Found");
+        assert_eq!(f.cols[0].at.name(&f.home), "Search results");
         assert_eq!(narrow_names(f), ["beach.png", "garden.png", "hills.jpg"]);
         assert_eq!(f.cols[0].narrow.kind, Kind::Pictures, "the search took its choices with it");
         f.update(Msg::Find(FindMsg::Open(Some(0))));
@@ -428,7 +428,7 @@ mod tests {
         assert_eq!(names(&f), ["notes.txt", "Tax return.txt"]);
         let i = f.cols[0].tabs[0].entries.iter().position(|e| e.name == "notes.txt").unwrap();
         f.update(Msg::Pick(0, vec![i]));
-        assert_eq!(words(&f.cols[0].tabs[0], 1).unwrap(), "In the folder searched. Line 2: ring the bank");
+        assert_eq!(words(&f.cols[0].tabs[0], 1).unwrap(), "In the folder you searched. Line 2: ring the bank");
 
         std::fs::remove_file(dir.join("notes.txt")).unwrap();
         f.reload_all();

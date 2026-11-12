@@ -1,4 +1,4 @@
-// No tick glyph and no green state dot.
+//! No tick glyph and no green state dot: a yes is a word, an accept pill
 
 #[cfg(test)]
 pub const GO_ICON: &str = "go-next-symbolic";

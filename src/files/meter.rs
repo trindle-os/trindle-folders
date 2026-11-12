@@ -1,4 +1,4 @@
-// How long work on files says how far it has got, and how it is stopped.
+//! How long work on files says how far it has got, and how it is stopped:
 
 use std::cell::Cell;
 use std::io::{self, Read, Write};

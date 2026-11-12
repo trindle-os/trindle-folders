@@ -1,4 +1,4 @@
-// Reading a zip's central directory and the bytes of one entry.
+//! Reading a zip's central directory and the bytes of one entry.
 
 use std::fs::File;
 use std::io::{self, Read, Seek, SeekFrom};

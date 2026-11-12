@@ -7,8 +7,8 @@ license = "GPL-3.0-or-later"
 description = "Folders for Trindle: a file manager with two panes, tabs, archives, drives and network places"
 
 [dependencies]
-trindle-toolkit = { git = "https://github.com/trindle-os/trindle-toolkit", rev = "3b1e06bc4d4ccb94b9d7b876feecc37aa4765e74" }
-trindle-common = { git = "https://github.com/trindle-os/trindle-toolkit", rev = "3b1e06bc4d4ccb94b9d7b876feecc37aa4765e74" }
+trindle-toolkit = { git = "https://github.com/trindle-os/trindle-toolkit", rev = "7a039de13db7b259629ee19aad62c4b696c40d28" }
+trindle-common = { git = "https://github.com/trindle-os/trindle-toolkit", rev = "7a039de13db7b259629ee19aad62c4b696c40d28" }
 libc = "0.2"
 zbus = "5"
 futures-lite = "2"
@@ -42,10 +42,10 @@ wayland-client = "0.31"
 wayland-protocols = { version = "0.32", features = ["client", "staging", "unstable"] }
 
 [build-dependencies]
-trindle-common = { git = "https://github.com/trindle-os/trindle-toolkit", rev = "3b1e06bc4d4ccb94b9d7b876feecc37aa4765e74" }
+trindle-common = { git = "https://github.com/trindle-os/trindle-toolkit", rev = "7a039de13db7b259629ee19aad62c4b696c40d28" }
 
 [dev-dependencies]
-trindle-toolkit = { git = "https://github.com/trindle-os/trindle-toolkit", rev = "3b1e06bc4d4ccb94b9d7b876feecc37aa4765e74", features = ["testing"] }
+trindle-toolkit = { git = "https://github.com/trindle-os/trindle-toolkit", rev = "7a039de13db7b259629ee19aad62c4b696c40d28", features = ["testing"] }
 rcgen = { version = "0.13", default-features = false, features = ["ring", "pem"] }
 tempfile = "3"
 

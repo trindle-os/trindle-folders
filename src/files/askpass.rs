@@ -1,4 +1,4 @@
-// The password and passphrase questions that ssh asks, answered in a Folders window.
+//! ssh's askpass. When a server wants a password, or a key its passphrase,
 
 use std::cell::RefCell;
 use std::io::Write;
@@ -67,6 +67,6 @@ mod tests {
         assert_eq!(q("john@example.com's password: "), "john@example.com's password");
         assert_eq!(title_for(&q("Enter passphrase for key '/k': ")), "Key passphrase");
         assert_eq!(title_for(&q("john@example.com's password: ")), "Server password");
-        assert_eq!(question(&["x".into()]), "The server asks for a password.");
+        assert_eq!(question(&["x".into()]), "Type the password for this server.");
     }
 }

@@ -1,4 +1,4 @@
-// The part of Properties that can be changed for one file.
+//! The part of Properties that can be changed for one file.
 
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -361,9 +361,9 @@ pub fn view(d: &Details, media: bool) -> Vec<Node<Msg>> {
 fn basic_rows(d: &Details) -> Vec<Node<Msg>> {
     let mut out = Vec::new();
     if let Some(f) = d.flags {
-        out.push(toggle(t!("folders-details-read-only"), t!("folders-details-read-only-sub"), f.read_only, t!("folders-details-read-only-tip"), |on| detail(DetailMsg::ReadOnly(on))));
+        out.push(toggle(t!("folders-details-read-only"), "", f.read_only, t!("folders-details-read-only-tip"), |on| detail(DetailMsg::ReadOnly(on))));
         if !d.folder {
-            out.push(toggle(t!("folders-details-runnable"), t!("folders-details-runnable-sub"), f.executable, t!("folders-details-runnable-tip"), |on| detail(DetailMsg::Runnable(on))));
+            out.push(toggle(t!("folders-details-runnable"), "", f.executable, t!("folders-details-runnable-tip"), |on| detail(DetailMsg::Runnable(on))));
         }
     }
     for (which, key, text) in [(When::Modified, t!("folders-details-modified"), &d.modified), (When::Opened, t!("folders-details-opened"), &d.opened)] {

@@ -1,9 +1,9 @@
-// Long disk work in Folders goes through the gentle rule, read from the code itself.
+//! Long disk work in Folders goes through the gentle rule, read from the code itself.
 
 use crate::common::no_writing_in_place::{all_code, code};
 
 const LONG: &[&str] = &[
-    "files/act/mod.rs", "files/act/acts.rs", "files/act/drop.rs", "files/act/jobs.rs", "files/act/msg.rs", "files/act/steps.rs", "files/act/text.rs", "files/act/types.rs", "files/act/undo.rs", "files/act/window.rs", "files/dialogs.rs", "toolkit/common/file_work/work/bin.rs", "toolkit/common/file_work/work/copy.rs", "toolkit/common/file_work/work/crew.rs", "toolkit/common/file_work/work/finish.rs", "toolkit/common/file_work/work/leave.rs", "toolkit/common/file_work/work/looks.rs", "toolkit/common/file_work/work/mod.rs", "toolkit/common/file_work/work/plan.rs", "toolkit/common/file_work/work/run.rs", "toolkit/common/file_work/work/said.rs", "toolkit/common/file_work/work/side.rs", "toolkit/common/file_work/work/undo.rs", "toolkit/common/file_work/work/walk.rs", "files/far/mod.rs", "files/far/card.rs", "files/far/copy.rs", "files/far/ends.rs", "files/far/hands.rs", "files/far/links.rs", "files/far/msg.rs", "files/far/put.rs", "files/far/walk.rs", "files/far/window.rs", "files/jobs.rs",
+    "files/app/mod.rs", "files/act/mod.rs", "files/act/acts.rs", "files/act/drop.rs", "files/act/jobs.rs", "files/act/msg.rs", "files/act/steps.rs", "files/act/text.rs", "files/act/types.rs", "files/act/undo.rs", "files/act/window.rs", "files/dialogs.rs", "toolkit/common/file_work/work/bin.rs", "toolkit/common/file_work/work/copy.rs", "toolkit/common/file_work/work/crew.rs", "toolkit/common/file_work/work/finish.rs", "toolkit/common/file_work/work/leave.rs", "toolkit/common/file_work/work/looks.rs", "toolkit/common/file_work/work/mod.rs", "toolkit/common/file_work/work/plan.rs", "toolkit/common/file_work/work/run.rs", "toolkit/common/file_work/work/said.rs", "toolkit/common/file_work/work/side.rs", "toolkit/common/file_work/work/undo.rs", "toolkit/common/file_work/work/walk.rs", "files/far/mod.rs", "files/far/card.rs", "files/far/copy.rs", "files/far/ends.rs", "files/far/hands.rs", "files/far/links.rs", "files/far/msg.rs", "files/far/put.rs", "files/far/walk.rs", "files/far/window.rs", "files/jobs.rs",
     "files/archive/mod.rs", "files/archive/pack.rs", "files/archive/trouble.rs", "files/archive/unpack.rs", "files/archive/walk.rs",
     "files/archive/sevenz/header.rs", "files/archive/sevenz/lock.rs", "files/archive/sevenz/mod.rs", "files/archive/sevenz/unpack.rs",
     "files/archive/zip/dir.rs", "files/archive/zip/dos.rs", "files/archive/zip/lock.rs", "files/archive/zip/mod.rs", "files/archive/zip/write.rs",
@@ -19,7 +19,8 @@ const NOT_DISK: &[(&str, usize, &str)] = &[
     ("files/act/window.rs", 1, "a notice sent, which only waits and reads or writes no file"),
     ("files/unarchive/run.rs", 1, "watches the switch that stops the walled reader, and reads nothing"),
     ("files/index.rs", 1, "listens on the bus for the person being away, and reads no file"),
-    ("files/far/window.rs", 1, "one look at a server for the window, which the person is waiting for"),
+    ("files/far/window.rs", 1, "the clearing of copies an earlier Folders left in its own cache, at start-up"),
+    ("files/app/mod.rs", 1, "the one way work leaves the window's thread (`off_thread`): looks at a server or an archive, whose copying is gentle within (`far::copy`, `archive::take_out`)"),
 ];
 
 const POURS: [&str; 4] = ["io::copy(", "fs::copy(", "copy_file_range(", "sendfile("];

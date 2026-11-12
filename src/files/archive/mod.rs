@@ -1,4 +1,4 @@
-// Archives: packing chosen files and folders into a .zip or a tar (plain, or squeezed with gzip, bzip2 or xz), unpacking them here or into a folder of their own, and looking inside one as if it were a folder.
+//! Archives: packing into zip or tar, unpacking, and looking inside one as a folder.
 
 mod pack;
 mod sevenz;

@@ -1,4 +1,4 @@
-// Drives plugged in, in Files' sidebar.
+//! Drives plugged in, in Files' sidebar: every removable volume UDisks lists,
 
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -270,7 +270,7 @@ mod tests {
         let mut f = files();
         f.update(Msg::Drive(DriveMsg::Listed(vec![vol("sdb1", "HOLIDAY", &[])])));
         f.update(Msg::Drive(DriveMsg::Mounted("sdb1".into(), Err("Something is still using it.".into()))));
-        assert!(f.bad && f.said == "HOLIDAY could not be opened: Something is still using it.", "{}", f.said);
+        assert!(f.bad && f.said == "Folders couldn't open HOLIDAY: Something is still using it.", "{}", f.said);
         f.update(Msg::Drive(DriveMsg::Mounted("sdb1".into(), Err(String::new()))));
         assert!(!f.bad && f.said.is_empty());
     }
@@ -288,9 +288,9 @@ mod tests {
         f.go(p, Where::Folder(std::env::temp_dir()));
         f.update(Msg::Drive(DriveMsg::Eject(1)));
         assert_eq!(f.cols[p].tabs[0].at, Where::Folder(f.home.clone()), "nothing in the window holds it");
-        assert!(f.said.contains("Putting HOLIDAY away"), "{}", f.said);
+        assert!(f.said.contains("Ejecting HOLIDAY"), "{}", f.said);
         f.update(Msg::Drive(DriveMsg::Ejected("sdb1".into(), Err("Something is still using it.".into()))));
-        assert!(f.bad && f.said.starts_with("HOLIDAY could not be put away"), "{}", f.said);
+        assert!(f.bad && f.said.starts_with("Folders couldn't eject HOLIDAY"), "{}", f.said);
     }
 
     #[test]
@@ -303,7 +303,7 @@ mod tests {
         f.update(Msg::Drive(DriveMsg::Listed(vec![vol("sdb1", "HOLIDAY", &[])])));
         f.update(Msg::Drive(DriveMsg::Ejected("sdb1".into(), Ok(()))));
         let (n, words) = f.notice.clone().expect("the notice says it can be taken out");
-        assert_eq!(words, "HOLIDAY can be taken out now");
+        assert_eq!(words, "You can unplug HOLIDAY now");
         f.notify("Another");
         f.update(Msg::NoticeGone(n));
         assert!(f.notice.is_some());

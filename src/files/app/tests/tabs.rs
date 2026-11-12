@@ -1,4 +1,4 @@
-// Middle clicks and double clicks that open tabs, and a middle click that closes one.
+//! Middle clicks and double clicks that open tabs, and a middle click that closes one.
 
 use crate::files::act::Land;
 

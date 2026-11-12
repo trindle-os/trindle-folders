@@ -1,4 +1,4 @@
-// Folders is an app of its own: it needs nothing but the toolkit and the shared code beside it to run.
+//! Folders is an app of its own: it needs only the toolkit and the shared code. What it reaches for outside itself is looked for here when it runs (`Parts::look`), never assumed from the build, and a row that needs a missing part is left out (`parts.fit`).
 
 use std::path::Path;
 
@@ -218,7 +218,7 @@ mod tests {
         f.parts = Parts::all();
         image::RgbImage::new(3841, 16).save(dir.join("Papers/huge.png")).unwrap();
         f.do_act(Act::Wallpaper, 0, vec![dir.join("Papers/huge.png")]);
-        assert_eq!((f.said.as_str(), f.bad), ("huge.png cannot be the wallpaper: larger than 4K.", true));
+        assert_eq!((f.said.as_str(), f.bad), ("huge.png can't be used as the wallpaper: larger than 4K.", true));
         f.parts = Parts::none();
         let share = f.share_form(&dir.join("Papers/Albums")).expect("the Share part is there");
         assert_eq!(share.cannot.as_deref(), Some(no_helper_share()));

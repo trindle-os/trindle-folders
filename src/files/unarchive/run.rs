@@ -1,4 +1,4 @@
-// Starting the child in its box and listening to what it sends.
+//! Starting the child in its box and listening to what it sends.
 
 use std::ffi::OsString;
 use std::io::{self, BufReader, Read, Write};

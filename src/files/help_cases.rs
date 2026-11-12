@@ -1,4 +1,4 @@
-// Tests that each kind of failure in Folders shows its quiet More and lands on the right page of Help (`files::help`).
+//! Tests that each kind of failure in Folders shows its quiet More and
 
 use std::path::{Path, PathBuf};
 
@@ -11,6 +11,10 @@ use crate::toolkit::ui::App;
 
 fn more() -> String {
     format!("button: {}", crate::toolkit::t!("common-more"))
+}
+
+pub(super) fn window_has_more(said: &[String]) -> bool {
+    said.contains(&more())
 }
 
 fn page_of(key: &str) -> &'static str {
@@ -102,7 +106,7 @@ fn a_server_failure_in_the_foot_opens_the_page_for_a_server_or_a_phone() {
     for (far, page) in [("sftp://jo@example.com/a.txt", SERVER_REFUSED), ("mtp://pixel/internal/a.jpg", PHONE)] {
         f.update(Msg::Far(FarMsg::Fetched { far: PathBuf::from(far), then: Then::Open, got: Err("The server said no.".into()) }));
         assert_eq!((f.said_help, f.bad), (Some(page), true), "{far}");
-        assert!(super::view::view(&f).said().contains(&more()), "{far}");
+        assert!(window_has_more(&super::view::view(&f).said()), "{far}");
         f.update(Msg::Help(page));
         assert_eq!(f.helped.last(), Some(&page));
     }
@@ -122,8 +126,8 @@ fn a_refused_name_has_a_more_in_the_foot() {
     f.update(Msg::Rename);
     f.update(Msg::RenameText("a/b".into()));
     f.update(Msg::RenameDone);
-    assert_eq!((f.said.as_str(), f.said_help), ("A name cannot hold a slash.", Some(NAME_REFUSED)));
-    assert!(super::view::view(&f).said().contains(&more()));
+    assert_eq!((f.said.as_str(), f.said_help), ("A name can't have a slash in it.", Some(NAME_REFUSED)));
+    assert!(window_has_more(&super::view::view(&f).said()));
     let _ = std::fs::remove_dir_all(dir);
 }
 
@@ -135,7 +139,7 @@ fn a_folder_that_will_not_open_has_a_more_in_the_pane() {
     pane.entries.clear();
     pane.all.clear();
     pane.error = Some("This folder is no longer there.".into());
-    assert!(super::view::view(&f).said().contains(&more()));
+    assert!(window_has_more(&super::view::view(&f).said()));
 }
 
 #[test]

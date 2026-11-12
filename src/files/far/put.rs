@@ -1,4 +1,4 @@
-// Putting one thing into a folder, which may be on a server: the one place a name is joined to the folder the person chose.
+//! Putting one thing into a folder, which may be on a server: the one place a name is joined to the folder the person chose.
 
 use std::collections::HashSet;
 use std::fs;

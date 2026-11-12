@@ -1,4 +1,4 @@
-// Windows and Samba shares, mounted by the kernel's cifs so every program can open the files on them.
+//! Windows and Samba shares, mounted by the kernel's cifs so every program
 
 use crate::toolkit::t;
 use std::net::IpAddr;
@@ -184,13 +184,13 @@ impl Login {
     pub fn check(&self) -> Result<(), String> {
         let name_ok = |s: &str| s.len() <= MAX_LOGIN && !s.chars().any(|c| c.is_control() || matches!(c, '%' | '/' | '\\' | ','));
         if self.user.is_empty() || !name_ok(&self.user) {
-            return Err("That is not a user name a share can take.".into());
+            return Err(t!("folders-shares-bad-user").into());
         }
         if !name_ok(&self.domain) {
-            return Err("That is not a domain a share can take.".into());
+            return Err(t!("folders-shares-bad-domain").into());
         }
         if self.password.len() > MAX_LOGIN || self.password.chars().any(|c| matches!(c, '\n' | '\r' | '\0')) {
-            return Err("A share's password cannot hold a line break.".into());
+            return Err(t!("folders-shares-bad-password").into());
         }
         Ok(())
     }
@@ -212,7 +212,7 @@ impl Login {
         let domain = lines.next().unwrap_or_default().to_string();
         let password = Zeroizing::new(lines.next().unwrap_or_default().to_string());
         if lines.any(|l| !l.is_empty()) {
-            return Err("A share's password cannot hold a line break.".into());
+            return Err(t!("folders-shares-bad-password").into());
         }
         let l = Login { user, domain, password };
         l.check()?;
@@ -247,18 +247,18 @@ pub enum Problem {
 
 impl Problem {
     pub fn words(&self, server: &str, share: Option<&str>) -> String {
-        let it = share.map_or_else(|| server.to_string(), |s| format!("{s} on {server}"));
+        let it = share.map_or_else(|| server.to_string(), |s| t!("folders-shares-share-on", share = s, server = server));
         match self {
-            Problem::NeedsLogin => format!("{server} wants a user name and password for {it}."),
-            Problem::WrongLogin => format!("The user name or password was not right for {it}."),
-            Problem::Account => format!("Your account on {server} is locked or switched off, or its password has run out."),
-            Problem::NoShare => format!("{server} has no shared folder called {}.", share.unwrap_or("that")),
-            Problem::Denied => format!("That account may not open {it}."),
-            Problem::Asleep => format!("{server} did not answer. It may be asleep or switched off: wake it and try again."),
-            Problem::NoComputer => format!("No computer called {server} could be found on this network."),
-            Problem::Smb1 => format!("{server} only speaks SMB1, an old way of sharing that is no longer safe, so Trindle does not use it."),
+            Problem::NeedsLogin => t!("folders-shares-needs-login", server = server, it = &it),
+            Problem::WrongLogin => t!("folders-shares-wrong-login", it = &it),
+            Problem::Account => t!("folders-shares-account", server = server),
+            Problem::NoShare => t!("folders-shares-no-share", server = server, share = share.unwrap_or_default()),
+            Problem::Denied => t!("folders-shares-denied", it = &it),
+            Problem::Asleep => t!("folders-shares-asleep", server = server),
+            Problem::NoComputer => t!("folders-shares-no-computer", server = server),
+            Problem::Smb1 => t!("folders-shares-smb1", server = server),
             Problem::Nfs4 => t!("folders-shares-nfs-version", server = server),
-            Problem::Missing(package) => format!("This needs Debian's {package}, which is not installed."),
+            Problem::Missing(package) => t!("folders-shares-missing", package = *package),
             Problem::NotAllowed(w) | Problem::Other(w) => w.clone(),
         }
     }
@@ -278,7 +278,7 @@ pub fn mount_problem(said: &str, guest: bool) -> Problem {
         Some(101 | 110 | 111 | 112 | 113 | 115) => Problem::Asleep,
         Some(95) => Problem::Smb1,
         _ if said.contains("could not resolve address") || said.contains("resolve") => Problem::NoComputer,
-        _ => Problem::Other(last_line(said, "The share could not be opened.")),
+        _ => Problem::Other(last_line(said, t!("folders-shares-open-failed"))),
     }
 }
 
@@ -295,7 +295,7 @@ pub fn nfs_problem(said: &str) -> Problem {
     } else if has("failed to resolve") || has("can't get address") || has("name or service not known") || has("unknown host") {
         Problem::NoComputer
     } else {
-        Problem::Other(last_line(said, "The shared folder could not be opened."))
+        Problem::Other(last_line(said, t!("folders-shares-open-export-failed")))
     }
 }
 
@@ -319,7 +319,7 @@ pub fn list_problem(said: &str, guest: bool) -> Problem {
     } else if has("protocol negotiation failed") || has("NT_STATUS_CONNECTION_RESET") {
         Problem::Smb1
     } else {
-        Problem::Other(last_line(said, "Its shared folders could not be listed."))
+        Problem::Other(last_line(said, t!("folders-shares-list-failed")))
     }
 }
 
@@ -456,9 +456,9 @@ mod tests {
         assert_eq!(list_problem("protocol negotiation failed: NT_STATUS_CONNECTION_RESET", true), Problem::Smb1);
         assert_eq!(list_problem("session setup failed: NT_STATUS_ACCOUNT_LOCKED_OUT", false), Problem::Account);
         assert!(Problem::WrongLogin.ask() && Problem::NeedsLogin.ask() && !Problem::Asleep.ask());
-        assert_eq!(Problem::NoShare.words("NAS", Some("Photos")), "NAS has no shared folder called Photos.");
+        assert_eq!(Problem::NoShare.words("NAS", Some("Photos")), "NAS doesn't have a shared folder called Photos.");
         assert!(Problem::Asleep.words("NAS", None).contains("asleep"));
-        assert_eq!(Problem::Missing("smbclient").words("NAS", None), "This needs Debian's smbclient, which is not installed.");
+        assert_eq!(Problem::Missing("smbclient").words("NAS", None), "This needs Debian's smbclient package, which isn't installed.");
         assert_eq!(Problem::NotAllowed("Not done.".into()).words("NAS", None), "Not done.");
     }
 

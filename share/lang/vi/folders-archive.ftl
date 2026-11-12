@@ -1,182 +1,276 @@
 
+# machine translated (Vietnamese), not yet reviewed by a person.
 
+# Reason an archive would not open: it is locked with a password and none was given.
+# SAFETY: needs a human review before it ships
 folders-archive-trouble-locked = nó bị khóa bằng mật khẩu
 
+# Reason an archive would not open: the password given is not the one.
+# SAFETY: needs a human review before it ships
 folders-archive-trouble-wrong-key = mật khẩu đó không mở được nó
 
+# Reason an archive would not open: what came out with the password makes no sense, so the password is wrong or the archive is damaged.
 folders-archive-trouble-wrong-or-bad = mật khẩu đó không mở được nó, hoặc tệp nén bị hỏng
 
-folders-archive-trouble-locked-rar = đây là tệp RAR khóa bằng mật khẩu, Folders không mở khóa được; tệp không có lỗi gì
+# Reason an archive would not open: it is a RAR locked with a password.
+folders-archive-trouble-locked-rar = đây là tệp RAR có mật khẩu mà Folders không mở khóa được, nhưng bản thân tệp không bị hỏng
 
-folders-archive-trouble-locked-foreign = nó bị khóa bằng mật khẩu và được nén theo cách Folders không mở khóa được
+# Reason an archive would not open: it is locked and packed a way Folders does not know.
+folders-archive-trouble-locked-foreign = nó dùng một kiểu bảo vệ bằng mật khẩu mà Folders không mở khóa được
 
-folders-archive-trouble-unknown = đây không phải tệp nén mà Folders mở được
+# Reason a file would not open as an archive: it is not a kind Folders reads.
+folders-archive-trouble-unknown = đây không phải loại tệp nén mà Folders mở được
 
-folders-archive-trouble-too-many = nó chứa hơn một triệu mục, nhiều hơn mức Folders sẽ giải nén
+# Reason an archive would not unpack: it holds too many things.
+folders-archive-trouble-too-many = nó có hơn một triệu mục, nhiều quá để Folders giải nén
 
-folders-archive-trouble-no-room = ở đây không đủ chỗ cho những gì nó chứa
+# Reason an archive would not unpack: the place it was to go has too little room.
+folders-archive-trouble-no-room = ở đây không đủ dung lượng cho những gì có trong nó
 
-folders-archive-trouble-gave-up = cần nhiều bộ nhớ hoặc thời gian để đọc hơn mức Folders cho phép
+# Reason an archive would not open: reading it takes more memory or time than is allowed.
+folders-archive-trouble-gave-up = nó cần nhiều bộ nhớ hoặc thời gian để mở hơn mức Folders cho phép
 
-folders-archive-trouble-no-reader = thiếu phần của Trindle dùng để đọc loại này, và cài bản cập nhật sẽ khôi phục nó
+# Reason an archive would not open: the program that reads this kind is not on the computer.
+folders-archive-trouble-no-reader = thiếu phần của Trindle dùng để mở loại tệp nén này, nên hãy cài bản cập nhật để khôi phục nó
 
-folders-archive-trouble-foreign = nó được nén theo cách Folders không đọc được
+# Reason an archive would not open: it is packed a way Folders does not know.
+folders-archive-trouble-foreign = nó dùng một kiểu nén mà Folders không đọc được
 
-folders-archive-trouble-parts = thiếu một phần của nó, và mọi phần phải nằm trong cùng một thư mục
+# Reason a split archive would not open: one of its parts is not there.
+folders-archive-trouble-parts = thiếu một phần của nó, và tất cả các phần phải nằm trong cùng một thư mục
 
-folders-archive-why-damaged = nó bị hỏng hoặc bị cắt cụt
+# Reason given for an archive that cannot be read when the file is damaged or ends too soon.
+folders-archive-why-damaged = nó bị hỏng hoặc không đầy đủ
 
-folders-archive-why-no-room = không còn chỗ trống
+# Reason given for an archive that cannot be written when the drive is full.
+folders-archive-why-no-room = không còn dung lượng trống
 
-folders-archive-why-read-only = không ghi được gì vào thư mục đó
+# Reason given for an archive that cannot be unpacked when the folder cannot be written in.
+folders-archive-why-read-only = bạn không có quyền, hoặc ổ đĩa chỉ cho phép đọc
 
+# Reason given for an archive that cannot be read when the file has gone.
 folders-archive-why-gone = nó không còn ở đó nữa
 
+# Reason given for an archive that cannot be read: it needs more memory than is allowed.
 folders-archive-why-memory = cần nhiều bộ nhớ để đọc hơn mức Folders cho phép
 
-folders-archive-why-other = không đọc được nó
+# Reason given for an archive that cannot be read when no better reason is known.
+folders-archive-why-other = đã xảy ra lỗi không mong đợi
 
-folders-archive-inside-too-big = quá lớn để mở từ bên trong tệp nén
+# Reason a file inside an archive cannot be opened: it is too big.
+folders-archive-inside-too-big = nó quá lớn để mở từ bên trong tệp nén
 
-folders-archive-inside-missing = không có trong tệp nén
+# Reason a file cannot be taken from an archive: it is not in it.
+folders-archive-inside-missing = nó không có trong tệp nén
 
-folders-archive-7z-memory = tệp 7z này cần nhiều bộ nhớ để giải nén hơn mức Folders sẽ cấp
+# Reason a 7z archive would not unpack: it needs more memory than is allowed.
+folders-archive-7z-memory = tệp nén 7z này cần nhiều bộ nhớ để giải nén hơn mức Folders cho phép
 
-folders-archive-pack-grew = một tệp đã phình quá lớn trong lúc đang nén
+# Reason making an archive failed: a file grew while it was being packed.
+folders-archive-pack-grew = một tệp đã phình quá lớn trong lúc Folders đang nén nó
 
+# Reason making an archive failed: something with the archive's name is already there.
 folders-archive-pack-exists = đã có thứ gì đó mang tên đó
 
-folders-archive-pack-no-name = không có gì để đặt tên cho nó
+# Reason making an archive failed: an item has no name to put in it.
+folders-archive-pack-no-name = có một mục không có tên mà Folders đưa được vào tệp nén
 
+# Reason making an archive failed: Folders reads this kind but cannot write it.
 folders-archive-pack-cannot-make = Folders mở được tệp nén loại này nhưng không tạo được
 
-folders-archive-damaged-7z = 7z bị hỏng: { $why }
+# Reason a 7z archive cannot be read; the cause follows, already written out.
+folders-archive-damaged-7z = tệp nén 7z bị hỏng: { $why }
 
-folders-archive-7z-a-lock-too-slow-to-open = một khóa quá chậm để mở
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: a lock too slow to open.
+folders-archive-7z-a-lock-too-slow-to-open = mở khóa sẽ mất quá nhiều thời gian
 
-folders-archive-7z-a-lock-with-no-settings = một khóa không có thiết lập
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: a lock with no settings.
+folders-archive-7z-a-lock-with-no-settings = thiếu các thiết lập bảo vệ bằng mật khẩu của nó
 
-folders-archive-7z-a-lock-with-short-settings = một khóa có thiết lập quá ngắn
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: a lock with short settings.
+folders-archive-7z-a-lock-with-short-settings = các thiết lập bảo vệ bằng mật khẩu của nó không đầy đủ
 
-folders-archive-7z-a-lock-with-no-key = một khóa không có khóa mã
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: a lock with no key.
+folders-archive-7z-a-lock-with-no-key = phần bảo vệ bằng mật khẩu của nó không có khóa dùng được
 
-folders-archive-7z-a-locked-block-is-not-whole = một khối bị khóa không nguyên vẹn
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: a locked block is not whole.
+folders-archive-7z-a-locked-block-is-not-whole = một phần bị khóa của nó không đầy đủ
 
-folders-archive-7z-the-header-ends-too-soon = phần đầu kết thúc quá sớm
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: the header ends too soon.
+folders-archive-7z-the-header-ends-too-soon = danh sách nội dung của nó kết thúc quá sớm
 
-folders-archive-7z-a-count-is-far-too-big = một con số đếm lớn quá mức
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: a count is far too big.
+folders-archive-7z-a-count-is-far-too-big = một con số trong đó lớn quá mức
 
-folders-archive-7z-a-block-has-no-packed-bytes = một khối không có byte nén
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: a block has no packed bytes.
+folders-archive-7z-a-block-has-no-packed-bytes = một phần của nó không có dữ liệu nén
 
-folders-archive-7z-a-block-is-out-of-reach = một khối nằm ngoài tầm với
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: a block is out of reach.
+folders-archive-7z-a-block-is-out-of-reach = một phần của nó trỏ ra ngoài cuối tệp
 
-folders-archive-7z-too-short = quá ngắn
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: too short.
+folders-archive-7z-too-short = tệp quá ngắn
 
-folders-archive-7z-no-7z-mark = không có dấu 7z
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: no 7z mark.
+folders-archive-7z-no-7z-mark = nó không bắt đầu giống một tệp 7z
 
-folders-archive-7z-the-start-header-s-check-does-not-match = mã kiểm tra của phần đầu khởi điểm không khớp
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: the start header's check does not match.
+folders-archive-7z-the-start-header-s-check-does-not-match = phần đầu tệp không qua được bước kiểm tra
 
-folders-archive-7z-the-header-is-out-of-reach = phần đầu nằm ngoài tầm với
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: the header is out of reach.
+folders-archive-7z-the-header-is-out-of-reach = danh sách nội dung của nó trỏ ra ngoài cuối tệp
 
-folders-archive-7z-the-header-s-check-does-not-match = mã kiểm tra của phần đầu không khớp
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: the header's check does not match.
+folders-archive-7z-the-header-s-check-does-not-match = danh sách nội dung của nó không qua được bước kiểm tra
 
-folders-archive-7z-a-packed-header-with-no-block = một phần đầu nén không có khối
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: a packed header with no block.
+folders-archive-7z-a-packed-header-with-no-block = danh sách nội dung đã nén của nó không có dữ liệu
 
-folders-archive-7z-the-header-is-far-too-big = phần đầu lớn quá mức
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: the header is far too big.
+folders-archive-7z-the-header-is-far-too-big = danh sách nội dung của nó lớn quá mức
 
-folders-archive-7z-the-packed-header-s-check-does-not-match = mã kiểm tra của phần đầu nén không khớp
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: the packed header's check does not match.
+folders-archive-7z-the-packed-header-s-check-does-not-match = danh sách nội dung đã nén của nó không qua được bước kiểm tra
 
-folders-archive-7z-an-unknown-header = một phần đầu không xác định
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: an unknown header.
+folders-archive-7z-an-unknown-header = danh sách nội dung của nó có định dạng mà Folders không nhận ra
 
-folders-archive-7z-headers-packed-too-many-times-over = phần đầu bị nén lồng quá nhiều lần
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: headers packed too many times over.
+folders-archive-7z-headers-packed-too-many-times-over = danh sách nội dung của nó bị nén lồng quá nhiều lần
 
-folders-archive-7z-an-unknown-part-in-the-header = một phần không xác định trong phần đầu
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: an unknown part in the header.
+folders-archive-7z-an-unknown-part-in-the-header = có thứ gì đó không xác định trong danh sách nội dung của nó
 
-folders-archive-7z-an-unknown-part-in-the-streams = một phần không xác định trong các luồng
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: an unknown part in the streams.
+folders-archive-7z-an-unknown-part-in-the-streams = có thứ gì đó không xác định trong dữ liệu của nó
 
-folders-archive-7z-an-unknown-part-in-the-packed-streams = một phần không xác định trong các luồng nén
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: an unknown part in the packed streams.
+folders-archive-7z-an-unknown-part-in-the-packed-streams = có thứ gì đó không xác định trong dữ liệu nén của nó
 
-folders-archive-7z-packed-streams-with-no-sizes = các luồng nén không có kích thước
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: packed streams with no sizes.
+folders-archive-7z-packed-streams-with-no-sizes = thiếu kích thước của dữ liệu nén
 
-folders-archive-7z-no-list-of-blocks = không có danh sách khối
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: no list of blocks.
+folders-archive-7z-no-list-of-blocks = thiếu danh sách các phần của nó
 
-folders-archive-7z-blocks-kept-elsewhere = các khối được giữ ở nơi khác
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: blocks kept elsewhere.
+folders-archive-7z-blocks-kept-elsewhere = danh sách các phần của nó nằm ở nơi mà Folders không đọc được
 
-folders-archive-7z-blocks-with-no-sizes = các khối không có kích thước
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: blocks with no sizes.
+folders-archive-7z-blocks-with-no-sizes = thiếu kích thước của các phần của nó
 
-folders-archive-7z-an-unknown-part-in-the-blocks = một phần không xác định trong các khối
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: an unknown part in the blocks.
+folders-archive-7z-an-unknown-part-in-the-blocks = có thứ gì đó không xác định trong danh sách các phần của nó
 
-folders-archive-7z-a-block-with-no-sensible-coders = một khối không có bộ mã hóa hợp lý
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: a block with no sensible coders.
+folders-archive-7z-a-block-with-no-sensible-coders = một phần của nó không có bước nén hợp lý
 
-folders-archive-7z-a-coder-with-too-many-ends = một bộ mã hóa có quá nhiều đầu nối
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: a coder with too many ends.
+folders-archive-7z-a-coder-with-too-many-ends = một bước nén của nó có quá nhiều đầu vào hoặc đầu ra
 
-folders-archive-7z-a-block-s-coders-do-not-join-up = các bộ mã hóa của một khối không nối với nhau
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: a block's coders do not join up.
+folders-archive-7z-a-block-s-coders-do-not-join-up = các bước nén của một phần trong nó không khớp với nhau
 
-folders-archive-7z-far-too-many-files = quá nhiều tệp
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: far too many files.
+folders-archive-7z-far-too-many-files = nó liệt kê quá nhiều tệp
 
-folders-archive-7z-files-in-a-block-with-no-sizes = các tệp trong một khối không có kích thước
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: files in a block with no sizes.
+folders-archive-7z-files-in-a-block-with-no-sizes = một số tệp trong một phần của nó không có kích thước được ghi lại
 
-folders-archive-7z-files-bigger-than-their-block = các tệp lớn hơn khối của chúng
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: files bigger than their block.
+folders-archive-7z-files-bigger-than-their-block = một số tệp lớn hơn phần chứa chúng
 
-folders-archive-7z-an-unknown-part-in-the-files-sizes = một phần không xác định trong kích thước các tệp
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: an unknown part in the files' sizes.
+folders-archive-7z-an-unknown-part-in-the-files-sizes = có thứ gì đó không xác định trong kích thước các tệp của nó
 
-folders-archive-7z-a-part-is-far-too-big = một phần lớn quá mức
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: a part is far too big.
+folders-archive-7z-a-part-is-far-too-big = một phần của nó lớn quá mức
 
-folders-archive-7z-names-kept-elsewhere = các tên được giữ ở nơi khác
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: names kept elsewhere.
+folders-archive-7z-names-kept-elsewhere = tên các tệp của nó nằm ở nơi mà Folders không đọc được
 
-folders-archive-7z-too-few-names = quá ít tên
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: too few names.
+folders-archive-7z-too-few-names = thiếu một số tên tệp
 
-folders-archive-7z-times-kept-elsewhere = các mốc thời gian được giữ ở nơi khác
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: times kept elsewhere.
+folders-archive-7z-times-kept-elsewhere = ngày của các tệp trong nó nằm ở nơi mà Folders không đọc được
 
-folders-archive-7z-attributes-kept-elsewhere = các thuộc tính được giữ ở nơi khác
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: attributes kept elsewhere.
+folders-archive-7z-attributes-kept-elsewhere = thông tin chi tiết về các tệp của nó nằm ở nơi mà Folders không đọc được
 
-folders-archive-7z-a-block-runs-past-the-end = một khối chạy quá phần cuối
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: a block runs past the end.
+folders-archive-7z-a-block-runs-past-the-end = một phần của nó chạy quá cuối tệp
 
-folders-archive-7z-a-block-s-coders-go-round-in-a-loop = các bộ mã hóa của một khối chạy vòng tròn
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: a block's coders go round in a loop.
+folders-archive-7z-a-block-s-coders-go-round-in-a-loop = các bước nén của một phần trong nó chạy vòng tròn
 
-folders-archive-7z-lzma-with-no-settings = LZMA không có thiết lập
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: LZMA with no settings.
+folders-archive-7z-lzma-with-no-settings = phần nén LZMA của nó không có thiết lập
 
-folders-archive-7z-lzma2-with-no-settings = LZMA2 không có thiết lập
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: LZMA2 with no settings.
+folders-archive-7z-lzma2-with-no-settings = phần nén LZMA2 của nó không có thiết lập
 
-folders-archive-7z-lzma2-with-impossible-settings = LZMA2 có thiết lập không thể có
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: LZMA2 with impossible settings.
+folders-archive-7z-lzma2-with-impossible-settings = phần nén LZMA2 của nó có thiết lập không hợp lệ
 
-folders-archive-7z-a-block-would-not-open = một khối không mở được
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: a block would not open.
+folders-archive-7z-a-block-would-not-open = Folders không mở được một phần của nó
 
-folders-archive-7z-a-block-ends-too-soon = một khối kết thúc quá sớm
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: a block ends too soon.
+folders-archive-7z-a-block-ends-too-soon = một phần của nó kết thúc quá sớm
 
-folders-archive-7z-a-file-ends-too-soon = một tệp kết thúc quá sớm
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: a file ends too soon.
+folders-archive-7z-a-file-ends-too-soon = một tệp trong nó kết thúc quá sớm
 
-folders-archive-7z-a-file-s-check-does-not-match = mã kiểm tra của một tệp không khớp
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: a file's check does not match.
+folders-archive-7z-a-file-s-check-does-not-match = một tệp trong nó không qua được bước kiểm tra
 
-folders-archive-7z-files-sizes-and-checks-do-not-match-up = kích thước và mã kiểm tra của các tệp không khớp nhau
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: files' sizes and checks do not match up.
+folders-archive-7z-files-sizes-and-checks-do-not-match-up = kích thước và mã kiểm tra các tệp của nó không khớp nhau
 
-folders-archive-7z-more-files-than-blocks-hold = nhiều tệp hơn mức các khối chứa được
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: more files than blocks hold.
+folders-archive-7z-more-files-than-blocks-hold = nó liệt kê nhiều tệp hơn mức các phần của nó chứa được
 
-folders-archive-7z-more-files-than-sizes = nhiều tệp hơn số kích thước
+# Cause given after "damaged 7z:" when a 7z archive cannot be read: more files than sizes.
+folders-archive-7z-more-files-than-sizes = một số tệp của nó không có kích thước được ghi lại
 
-folders-archive-damaged-zip = zip bị hỏng: { $why }
+# Reason a zip archive cannot be read; the cause follows, already written out.
+folders-archive-damaged-zip = tệp nén zip bị hỏng: { $why }
 
-folders-archive-zip-no-end-record = không có bản ghi kết thúc
+# Cause given after "damaged zip:" when a zip archive cannot be read: no end record.
+folders-archive-zip-no-end-record = thiếu bản ghi ở cuối tệp
 
-folders-archive-zip-no-zip64-end-record = không có bản ghi kết thúc ZIP64
+# Cause given after "damaged zip:" when a zip archive cannot be read: no ZIP64 end record.
+folders-archive-zip-no-zip64-end-record = thiếu bản ghi ZIP64 ở cuối tệp
 
-folders-archive-zip-directory-out-of-place = danh mục nằm sai chỗ
+# Cause given after "damaged zip:" when a zip archive cannot be read: directory out of place.
+folders-archive-zip-directory-out-of-place = danh sách nội dung của nó nằm sai chỗ
 
-folders-archive-zip-directory-too-big = danh mục quá lớn
+# Cause given after "damaged zip:" when a zip archive cannot be read: directory too big.
+folders-archive-zip-directory-too-big = danh sách nội dung của nó quá lớn
 
-folders-archive-zip-record-runs-past-the-directory = một bản ghi chạy quá danh mục
+# Cause given after "damaged zip:" when a zip archive cannot be read: record runs past the directory.
+folders-archive-zip-record-runs-past-the-directory = một mục chạy quá cuối danh sách nội dung của nó
 
-folders-archive-zip-no-local-header = không có phần đầu cục bộ
+# Cause given after "damaged zip:" when a zip archive cannot be read: no local header.
+folders-archive-zip-no-local-header = thiếu thông tin đặt trước một tệp trong nó
 
-folders-archive-zip-entry-runs-past-the-end = một mục chạy quá phần cuối
+# Cause given after "damaged zip:" when a zip archive cannot be read: entry runs past the end.
+folders-archive-zip-entry-runs-past-the-end = một tệp trong nó chạy quá cuối tệp nén
 
-folders-archive-zip-an-entry-s-check-does-not-match = mã kiểm tra của một mục không khớp
+# Cause given after "damaged zip:" when a zip archive cannot be read: an entry's check does not match.
+folders-archive-zip-an-entry-s-check-does-not-match = một tệp trong nó không qua được bước kiểm tra
 
-folders-archive-zip-an-entry-is-longer-than-it-says = một mục dài hơn mức nó khai
+# Cause given after "damaged zip:" when a zip archive cannot be read: an entry is longer than it says.
+folders-archive-zip-an-entry-is-longer-than-it-says = một tệp trong nó dài hơn kích thước đã ghi
 
-folders-archive-zip-a-locked-entry-is-cut-short = một mục bị khóa bị cắt cụt
+# Cause given after "damaged zip:" when a zip archive cannot be read: a locked entry is cut short.
+folders-archive-zip-a-locked-entry-is-cut-short = một tệp có mật khẩu trong nó không đầy đủ
 
-folders-archive-zip-a-lock-with-a-key-of-no-known-length = một khóa có khóa mã không rõ độ dài
+# Cause given after "damaged zip:" when a zip archive cannot be read: a lock with a key of no known length.
+folders-archive-zip-a-lock-with-a-key-of-no-known-length = phần bảo vệ bằng mật khẩu của nó dùng độ dài khóa mà Folders không nhận ra
 
-folders-archive-zip-a-locked-entry-s-check-does-not-match = mã kiểm tra của một mục bị khóa không khớp
+# Cause given after "damaged zip:" when a zip archive cannot be read: a locked entry's check does not match.
+folders-archive-zip-a-locked-entry-s-check-does-not-match = một tệp có mật khẩu trong nó không qua được bước kiểm tra
+
 

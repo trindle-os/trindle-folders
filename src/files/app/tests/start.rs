@@ -1,4 +1,4 @@
-// Where Files starts, and the switch between one pane and two.
+//! Where Files starts, and the switch between one pane and two.
 
 use super::*;
 

@@ -1,4 +1,4 @@
-// What the shares code is told and tells: the sign-in card, the messages, and what an opening reports.
+//! What the shares code is told and tells: the sign-in card, the messages, and what an opening reports.
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -55,7 +55,7 @@ pub enum ShareMsg {
     NfsMounted { t: usize, p: usize, asked: String, server: String, export: String, rest: String, got: Result<PathBuf, Problem> },
     Mounted { t: usize, p: usize, server: String, share: String, rest: String, tried: Tried, got: Result<(PathBuf, Option<Login>), Problem> },
     User(String),
-    Password(String),
+    Password(Zeroizing<String>),
     Remember(bool),
     Forget(bool),
     Go,

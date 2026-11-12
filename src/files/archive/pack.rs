@@ -1,4 +1,4 @@
-// Packing chosen files and folders into a new archive.
+//! Packing chosen files and folders into a new archive.
 
 use std::ffi::{OsStr, OsString};
 use std::fs::{self, File, OpenOptions};

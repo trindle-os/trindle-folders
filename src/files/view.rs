@@ -1,4 +1,4 @@
-// How the Files window looks: a toolbar, the sidebar, one or two panes and the bar between them.
+//! How the Files window looks: a toolbar, the sidebar, one or two panes
 
 mod sidebar;
 #[cfg(test)]
@@ -165,12 +165,13 @@ fn toolbar(f: &Files, pane: &Pane, p: usize) -> Node<Msg> {
     let new = word_button(t!("folders-view-new")).on_press(Msg::Menu(MenuMsg::New))
         .off(!super::inplace::can_rename(&pane.at) || f.earlier_at(&pane.at));
     let sheet = theme::sheet();
-    let room = f.room.0 - 2.0 * (sheet.panel_gap + sheet.card_padding) - 8.0 * (theme::icon_button() + BAR_GAP) - pill_guess(t!("folders-view-new")) - BAR_GAP;
+    let room = f.room.0 - 2.0 * (sheet.panel_gap + sheet.card_padding) - 9.0 * (theme::icon_button() + BAR_GAP) - pill_guess(t!("folders-view-new")) - BAR_GAP;
     let searching = f.find.open == Some(p);
     let nothing = pane.at == Where::Computer;
     let search_tip = if nothing { t!("folders-view-search-none") } else if searching { t!("folders-view-search-close") } else { t!("folders-view-search") };
     let fits = f.panel_room().is_some();
     let panel_tip = if !fits { super::panel::too_narrow() } else if f.kept.panel { t!("folders-view-panel-hide") } else { t!("folders-view-panel-show") };
+    let (hidden_icon, hidden_tip) = if f.hidden { ("view-reveal-symbolic", t!("folders-view-hidden-hide")) } else { ("view-conceal-symbolic", t!("folders-view-hidden-show")) };
     let view_icon = match f.view_of(p) { View::Icons => "view-grid-symbolic", View::List => "view-list-symbolic", View::Compact => "view-continuous-symbolic" };
     row(vec![
         button("go-previous-symbolic", t!("folders-view-back")).on_press(Msg::Back).off(pane.back.is_empty()),
@@ -182,6 +183,7 @@ fn toolbar(f: &Files, pane: &Pane, p: usize) -> Node<Msg> {
         button(stand_in::TWO_PANES, panes_tip).on(f.two).spoken(t!("folders-view-two-panes")).on_press(Msg::PanesAre(!f.two)),
         button(stand_in::PREVIEW_PANEL, panel_tip).on(f.kept.panel && fits).spoken(t!("folders-view-panel-spoken"))
             .on_press(Msg::Panel(super::panel::PanelMsg::Switch)).off(!fits),
+        button(hidden_icon, hidden_tip).on(f.hidden).spoken(t!("folders-view-hidden-spoken")).on_press(Msg::Hidden),
         button(view_icon, t!("folders-view-view")).on_press(Msg::Menu(MenuMsg::View)),
         button("view-more-symbolic", t!("folders-view-more")).on_press(Msg::Menu(MenuMsg::More)),
     ]).gap(BAR_GAP).width(Length::Fill)
@@ -414,14 +416,7 @@ fn pane_line(f: &Files, pane: &Pane, p: usize) -> Node<Msg> {
 }
 
 fn typed_line(words: String) -> Node<Msg> {
-    let (tip, copied) = (words.clone(), words.clone());
-    drawing((0.0, STATUS_H), tip, move |canvas, pen| {
-        let style = Style::monospace((icons::line_size() * pen.scale).round());
-        let dots = pen.fonts.layout("\u{2026}", &style, None);
-        let laid = pen.fonts.layout(&words, &style, None).cut(canvas.width() as f32, &dots);
-        let y = ((canvas.height() as f32 - laid.height) / 2.0).round();
-        pen.fonts.draw(canvas, &laid, 0.0, y, pen.theme.muted);
-    }).copies(copied).named(true).width(Length::Fill)
+    line_drawn(words, true, false, None).named(true)
 }
 
 fn location_words(f: &Files, at: &Where) -> String {
@@ -752,25 +747,24 @@ const EMPTY_SIDES: f32 = 12.0;
 const EMPTY_LEAST: f32 = 120.0;
 
 fn end_line(words: String) -> Node<Msg> {
-    let (tip, copied) = (words.clone(), words.clone());
-    drawing((0.0, STATUS_H), tip, move |canvas, pen| {
-        let style = Style::new((icons::line_size() * pen.scale).round());
-        let dots = pen.fonts.layout("\u{2026}", &style, None);
-        let laid = pen.fonts.layout(&words, &style, None).cut(canvas.width() as f32, &dots);
-        let y = ((canvas.height() as f32 - laid.height) / 2.0).round();
-        pen.fonts.draw(canvas, &laid, (canvas.width() as f32 - laid.width).max(0.0).round(), y, pen.theme.muted);
-    }).copies(copied).width(Length::Fill)
+    line_drawn(words, false, true, None)
 }
 
 fn one_line(words: String, tone: Tone) -> Node<Msg> {
+    line_drawn(words, false, false, Some(tone))
+}
+
+fn line_drawn(words: String, fixed: bool, at_end: bool, tone: Option<Tone>) -> Node<Msg> {
     let (tip, copied) = (words.clone(), words.clone());
     drawing((0.0, STATUS_H), tip, move |canvas, pen| {
-        let style = Style::new((icons::line_size() * pen.scale).round());
+        let size = (icons::line_size() * pen.scale).round();
+        let style = if fixed { Style::monospace(size) } else { Style::new(size) };
         let dots = pen.fonts.layout("\u{2026}", &style, None);
         let laid = pen.fonts.layout(&words, &style, None).cut(canvas.width() as f32, &dots);
         let y = ((canvas.height() as f32 - laid.height) / 2.0).round();
-        let ink = crate::toolkit::ui::toned(pen.theme, tone, pen.theme.fg);
-        pen.fonts.draw(canvas, &laid, 0.0, y, ink);
+        let x = if at_end { (canvas.width() as f32 - laid.width).max(0.0).round() } else { 0.0 };
+        let ink = tone.map_or(pen.theme.muted, |t| crate::toolkit::ui::toned(pen.theme, t, pen.theme.fg));
+        pen.fonts.draw(canvas, &laid, x, y, ink);
     }).copies(copied).width(Length::Fill)
 }
 

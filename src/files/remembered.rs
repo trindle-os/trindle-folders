@@ -1,4 +1,4 @@
-// The network shares the person has mounted, kept so they can be offered again after a restart.
+//! The network shares the person has mounted, kept so they can be offered again after a restart.
 
 use std::path::{Path, PathBuf};
 

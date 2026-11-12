@@ -1,4 +1,4 @@
-// Zip, written, entry by entry.
+//! Zip, written, entry by entry.
 
 use std::fs::File;
 use std::io::{self, Read, Seek, SeekFrom, Write};

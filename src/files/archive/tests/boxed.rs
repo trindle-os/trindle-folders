@@ -1,4 +1,4 @@
-// Kinds read through libarchive in its box.
+//! Kinds read through libarchive in its box.
 
 use super::*;
 use super::sz_bytes::SZ_LOCKED;
@@ -92,7 +92,7 @@ fn boxed_stops_and_breaks(dir: &Path, arc: &Path, name: &str, stop: &AtomicBool)
     let whole = fs::read(arc).unwrap();
     fs::write(&cut, &whole[..whole.len() / 2]).unwrap();
     let e = extract(&cut, None, &empty, Place::Folder, stop, &quiet).unwrap_err();
-    assert_eq!(why(&e), "it is damaged or cut short", "{name}");
+    assert_eq!(why(&e), "it's damaged or incomplete", "{name}");
     assert_eq!(fs::read_dir(&empty).unwrap().count(), 0, "{name}");
 }
 
@@ -304,7 +304,7 @@ fn squeezed_rar_old_and_new_and_the_zips_and_7z_only_libarchive_reads_unpack() {
 fn a_rar_split_across_files_unpacks_whole_or_says_a_part_is_missing() {
     let dir = place("split");
     let stop = AtomicBool::new(false);
-    let said = "a part of it is missing, and every part has to be in the same folder";
+    let said = "part of it is missing, and all its parts need to be in the same folder";
     let old = rar4_split(b"album/noise.bin", &noise(2600), &[1000, 1000]);
     type Parts<'a> = Vec<(&'a str, &'a [u8])>;
     let sets: [(&str, Parts); 3] = [
@@ -353,7 +353,7 @@ fn a_rar_split_across_files_unpacks_whole_or_says_a_part_is_missing() {
 fn a_locked_rar_says_it_is_a_rar_with_a_password_and_leaves_nothing() {
     let dir = place("locked");
     let stop = AtomicBool::new(false);
-    let said = "it is a RAR locked with a password, which Folders cannot unlock; nothing is wrong with the file";
+    let said = "it's a RAR file with a password Folders can't unlock, but the file itself isn't damaged";
     let out = dir.join("out");
     fs::create_dir(&out).unwrap();
     for name in ["rar5-locked.rar", "rar4-locked.rar"] {

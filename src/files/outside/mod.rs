@@ -1,4 +1,4 @@
-// Files and folders dragged between Folders and other programs.
+//! Files and folders dragged between Folders and other programs.
 
 use std::collections::HashSet;
 use std::path::{Component, Path, PathBuf};
@@ -27,7 +27,6 @@ const HELD_MOST: usize = 256;
 const DRIVE_ROOTS: [&str; 3] = ["/media", "/run/media", "/mnt"];
 const SYSTEM_TOPS: [&str; 20] = ["boot", "efi", "usr", "var", "etc", "opt", "snap", "nix", "proc", "sys", "dev", "run", "tmp", "root", "srv", "lib", "lib64",
                                  "bin", "sbin", "lost+found"];
-const SHARED_KINDS: [&str; 6] = ["nfs", "nfs4", "cifs", "smb3", "fuse.sshfs", "fuse.rclone"];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Wary {
@@ -57,8 +56,8 @@ pub fn drive_roots(mounts: &str, home: &Path) -> Vec<PathBuf> {
     for line in mounts.lines() {
         let mut fields = line.split(' ');
         let (Some(device), Some(at), Some(kind)) = (fields.next(), fields.next(), fields.next()) else { continue };
-        let real = (device.starts_with("/dev/") && !device.starts_with("/dev/loop")) || SHARED_KINDS.contains(&kind);
-        let at = PathBuf::from(at.replace("\\040", " ").replace("\\011", "\t").replace("\\134", "\\"));
+        let real = (device.starts_with("/dev/") && !device.starts_with("/dev/loop")) || super::places::on_another_computer(kind);
+        let at = PathBuf::from(super::places::unescape(at));
         let top = at.components().nth(1).and_then(|c| c.as_os_str().to_str().map(str::to_string));
         let system = top.as_deref().is_none_or(|t| SYSTEM_TOPS.contains(&t));
         if real && !system && !home.starts_with(&at) && !out.contains(&at) {

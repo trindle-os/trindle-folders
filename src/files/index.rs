@@ -1,4 +1,4 @@
-// The index: a list of every name in the home folder, kept in a small file so a search by name is near instant.
+//! The index: every name in the home folder, kept in a small file so a search by name is near instant. It is built on a thread of its own at the lowest priority and only while the computer is left alone.
 
 use std::collections::HashMap;
 use std::ffi::OsString;

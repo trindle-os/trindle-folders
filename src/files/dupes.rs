@@ -1,4 +1,4 @@
-// Finding duplicate files: grouped by size, then by a hash of the first kilobytes, then hashed in full.
+//! Finding duplicate files: files are grouped by size first, then by a hash
 
 use std::collections::{HashMap, HashSet};
 use std::fs;

@@ -1,4 +1,4 @@
-// Round trips, zip64 and the shapes of listings and times.
+//! Round trips, zip64 and the shapes of listings and times.
 
 use super::*;
 
@@ -36,6 +36,16 @@ fn every_format_goes_round() {
         assert!(read(&to, None, "src/noise.bin", 100).is_err());
         assert!(read(&to, None, "src/nothing", 100).is_err());
     }
+    let two = dir.join("two");
+    fs::create_dir_all(two.join("a")).unwrap();
+    fs::write(two.join("a/first.txt"), b"1").unwrap();
+    fs::write(two.join("cannot-be-placed.txt"), b"2").unwrap();
+    let arc = dir.join("two.zip");
+    compress(&[two.join("a"), two.join("cannot-be-placed.txt")], &arc, Format::Zip, &stop, &quiet).unwrap();
+    let out = dir.join("out-two");
+    fs::create_dir(&out).unwrap();
+    assert!(take_out(&arc, None, &["a".into(), "cannot-be-placed.txt".into()], &out, &stop, &quiet).is_err());
+    assert_eq!(fs::read_dir(&out).unwrap().count(), 0, "what was placed before the failure was left behind");
     let one = dir.join("one.tar.gz");
     compress(std::slice::from_ref(&src), &one, Format::TarGz, &stop, &quiet).unwrap();
     let out = dir.join("out-one");

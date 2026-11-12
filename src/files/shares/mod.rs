@@ -1,4 +1,4 @@
-// Windows and Samba shares in Files.
+//! Windows and Samba shares: a computer under Network is listed through smbclient and a share is mounted with cifs through trindle-admin, then shown as an ordinary folder.
 
 mod card;
 mod commands;

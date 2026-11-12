@@ -1,4 +1,4 @@
-// The short list of kernel calls a box refuses, the same list Flatpak uses.
+//! The short list of kernel calls a box refuses, the same list Flatpak uses
 
 const EPERM: u32 = libc::EPERM as u32;
 const ENOSYS: u32 = libc::ENOSYS as u32;

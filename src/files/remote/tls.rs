@@ -1,4 +1,4 @@
-// TLS for secure FTP, by rustls on ring's cryptography.
+//! TLS for secure FTP, by rustls on ring's cryptography. A certificate is
 
 use std::io::{self, Read, Write};
 use std::net::TcpStream;

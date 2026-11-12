@@ -1,4 +1,4 @@
-// Pictures of Files drawn without a screen, to look at.
+//! Pictures of Files drawn without a screen, to look at: run with
 
 mod getting_about;
 mod looks;

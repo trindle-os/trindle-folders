@@ -1,4 +1,4 @@
-// Logins kept in the keyring and held in memory, each piece of keyring work done in its turn.
+//! Logins kept in the keyring and held in memory, each piece of keyring work done in its turn.
 
 use crate::files::leave::{self, Leave, Reached, Way};
 use crate::common::keyring_said;
@@ -107,7 +107,7 @@ pub(super) fn settle(server: &str, share: Option<&str>, to: Reach, typed: Option
         Vec::new()
     });
     let mut tried = Tried { address, heard, ..Tried::default() };
-    let (sends, confirmed) = choose(server, tried.address.as_deref(), trust, typed, used, kept, seen, now());
+    let (sends, confirmed) = choose(tried.address.as_deref(), trust, typed, used, kept, seen, now());
     tried.keyring = unsaid.into_inner();
     match sends {
         Sends::Login(login) => match leave::leave(login, &way) {

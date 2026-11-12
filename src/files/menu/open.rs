@@ -1,4 +1,4 @@
-// Opening the menu for what is picked, a button of the top bar or a sidebar row, and following what the person does with it.
+//! Opening the menu for what is picked, a button of the top bar or a sidebar
 
 use std::path::{Path, PathBuf};
 
@@ -106,7 +106,7 @@ impl Files {
         let p = self.side();
         let sort = self.sorted_col().and_then(|c| crate::files::columns::Col::ALL.iter().position(|k| *k == c)).map_or(0, |k| k + 1);
         let group = crate::files::groups::GroupBy::ALL.iter().position(|g| *g == self.kept.group(&self.pane().at)).unwrap_or(0);
-        let lines = view_lines(self.view_of(p), sort, group, self.up, self.hidden);
+        let lines = view_lines(self.view_of(p), sort, group, self.up);
         self.top_menu(lines);
     }
 

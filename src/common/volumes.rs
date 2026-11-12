@@ -1,4 +1,4 @@
-// Plugged-in drives as UDisks reports them, and which to offer.
+//! Plugged-in drives as UDisks reports them, and which to offer.
 
 use std::cell::{Cell, RefCell};
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque};
@@ -10,6 +10,7 @@ use zbus::zvariant::{OwnedObjectPath, Value};
 use zeroize::Zeroizing;
 
 use super::hidden_drives;
+use crate::toolkit::t;
 use super::drive_bits::{self as plan, Mounted};
 use super::drive_bits::{mount_points, num, text};
 use crate::toolkit::bus::{self as dbus, Bus, Failed, Listen, Props};
@@ -81,7 +82,7 @@ impl Volume {
     }
 
     pub fn shown(&self) -> String {
-        if self.locked { format!("Locked: {}", self.name()) } else { self.name() }
+        if self.locked { t!("folders-volumes-locked-row", name = self.name()) } else { self.name() }
     }
 
     #[cfg(test)]
@@ -284,7 +285,7 @@ impl Maker<'_> {
             label: dbus::get_str(from, "IdLabel"),
             size: num(from, "Size"),
             drive: self.drive.clone(),
-            drive_name: if self.drive_name.is_empty() { "Drive".into() } else { self.drive_name.clone() },
+            drive_name: if self.drive_name.is_empty() { t!("folders-volumes-drive").into() } else { self.drive_name.clone() },
             kind: kind_of(self.d),
             mounts: mount_points(fs),
             locked,
@@ -312,30 +313,33 @@ pub fn best<'a>(parts: &[&'a Volume]) -> Option<&'a Volume> {
 }
 
 pub fn words(e: &Failed) -> String {
-    let all = e.to_string();
+    words_of(&e.to_string(), false)
+}
+
+fn words_of(all: &str, unlocking: bool) -> String {
     let l = all.to_lowercase();
-    if l.contains("no key available") || l.contains("failed to activate") || l.contains("incorrect passphrase")
-        || l.contains("bad passphrase") || l.contains("operation not permitted")
+    if unlocking && (l.contains("no key available") || l.contains("failed to activate") || l.contains("incorrect passphrase")
+        || l.contains("bad passphrase") || l.contains("operation not permitted"))
     {
-        "That passphrase did not open it.".into()
+        t!("folders-volumes-wrong-passphrase").into()
     } else if l.contains("already mounted") {
-        "It is already open.".into()
+        t!("folders-volumes-already-open").into()
     } else {
-        plan::plain_error(&all)
+        plan::plain_error(all)
     }
 }
 
 pub fn mount(bus: &Bus, lp: &Loop, v: &Volume, done: impl FnOnce(Result<String, String>) + 'static) {
     match v.mounted() {
         Some(m) => done(Ok(m.to_string())),
-        None if v.locked => done(Err("A passphrase is needed to open it.".into())),
+        None if v.locked => done(Err(t!("folders-volumes-needs-passphrase").into())),
         None => mount_at(bus, lp, &v.id, done),
     }
 }
 
 pub fn unlock(bus: &Bus, lp: &Loop, id: &str, passphrase: &str, done: impl FnOnce(Result<String, String>) + 'static) {
     bus.call(UD, id, ENCRYPTED).method("Unlock", &(passphrase, Opts::new()), true, Some(INTERACTIVE), lp, move |r| {
-        done(r.map_err(|e| words(&e)).and_then(|m| {
+        done(r.map_err(|e| words_of(&e.to_string(), true)).and_then(|m| {
             m.body().deserialize::<(OwnedObjectPath,)>().map(|b| b.0.to_string()).map_err(|e| e.to_string())
         }))
     });
@@ -366,10 +370,10 @@ pub fn ask_and_mount(bus: &Bus, lp: &Loop, display: &Rc<Display>, v: &Volume,
             _ => done(Err(String::new())),
         }
     };
-    let why = format!("Passphrase for {}", v.name());
-    if !prompt::ask(lp, display, "Unlock drive", &why, check, closed) {
+    let why = t!("folders-volumes-passphrase-for", name = v.name());
+    if !prompt::ask(lp, display, t!("folders-volumes-unlock-title"), &why, check, closed) {
         if let Some(done) = finish.borrow_mut().take() {
-            done(Err("The passphrase window would not open.".into()));
+            done(Err(t!("folders-volumes-prompt-failed").into()));
         }
     }
 }

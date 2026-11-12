@@ -1,4 +1,4 @@
-// The look as the toolkit gives it, and the ten highlight colours a folder may be marked with.
+//! The look as the toolkit gives it, and the ten highlight colours a folder may be marked with.
 
 #[cfg(test)]
 pub use crate::toolkit::common::style::{accent, DEFAULT_ACCENT};

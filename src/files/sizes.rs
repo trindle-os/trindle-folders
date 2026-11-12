@@ -1,4 +1,4 @@
-// A folder's real size: everything it holds, added up on a thread of its own.
+//! A folder's real size, added up on a thread of its own. Links are counted as themselves and never followed, other disks mounted inside are left out, and a file with two names counts once.
 
 use std::collections::{HashMap, HashSet};
 use std::fs;
@@ -28,6 +28,10 @@ impl Tally {
 }
 
 pub fn measure(folder: &Path, stop: &AtomicBool, tell: &mut dyn FnMut(&Tally)) -> io::Result<Tally> {
+    walk(folder, stop, tell, &mut Vec::new())
+}
+
+fn walk(folder: &Path, stop: &AtomicBool, tell: &mut dyn FnMut(&Tally), folders: &mut Vec<(PathBuf, Stamp)>) -> io::Result<Tally> {
     let top = fs::symlink_metadata(folder)?;
     let mut tally = Tally::default();
     if !top.is_dir() {
@@ -55,6 +59,7 @@ pub fn measure(folder: &Path, stop: &AtomicBool, tell: &mut dyn FnMut(&Tally)) -
             if meta.is_dir() {
                 if meta.dev() == disk {
                     tally.folders += 1;
+                    folders.push((path.clone(), (meta.dev(), meta.ino(), meta.modified().ok())));
                     stack.push(path);
                 }
             } else if meta.nlink() < 2 || seen.insert((meta.dev(), meta.ino())) {
@@ -76,7 +81,7 @@ fn stamp(folder: &Path) -> Option<Stamp> {
     fs::symlink_metadata(folder).ok().map(|m| (m.dev(), m.ino(), m.modified().ok()))
 }
 
-type Memory = Arc<Mutex<HashMap<PathBuf, (Stamp, Tally)>>>;
+type Memory = Arc<Mutex<HashMap<PathBuf, (Stamp, Vec<(PathBuf, Stamp)>, Tally)>>>;
 
 pub struct Sizes {
     queue: Queue<PathBuf>,
@@ -93,12 +98,13 @@ impl Sizes {
                 return;
             }
             let before = stamp(&folder);
-            match measure(&folder, stop, &mut |t| tell(&folder, t, false)) {
+            let mut inside = Vec::new();
+            match walk(&folder, stop, &mut |t| tell(&folder, t, false), &mut inside) {
                 Ok(t) => {
                     let trusted = |s: &Stamp| stamp(&folder).as_ref() == Some(s) && s.2.is_some_and(settled);
                     if let Some(s) = before.filter(trusted) {
                         if let Ok(mut m) = mem.lock() {
-                            m.insert(folder.clone(), (s, t));
+                            m.insert(folder.clone(), (s, inside, t));
                         }
                     }
                     tell(&folder, &t, true);
@@ -141,7 +147,8 @@ impl Sizes {
 fn recall(memory: &Memory, folder: &Path) -> Option<Tally> {
     let now = stamp(folder)?;
     let m = memory.lock().ok()?;
-    m.get(folder).filter(|(s, _)| *s == now).map(|(_, t)| *t)
+    let (s, inside, t) = m.get(folder)?;
+    (*s == now && inside.iter().all(|(p, s)| stamp(p).as_ref() == Some(s))).then_some(*t)
 }
 
 #[cfg(test)]
@@ -200,6 +207,13 @@ mod tests {
         sizes.ask(&dir);
         let (_, t2) = rx.recv_timeout(Duration::from_secs(5)).unwrap();
         assert_eq!(t2.bytes, t.bytes + 400);
+        super::super::index::age(&dir);
+        sizes.forget(&dir);
+        sizes.ask(&dir);
+        let _ = rx.recv_timeout(Duration::from_secs(5)).unwrap();
+        assert!(sizes.cached(&dir).is_some());
+        fs::write(dir.join("a/b/five"), vec![5u8; 500]).unwrap();
+        assert_eq!(sizes.cached(&dir), None, "a size from before a change deep inside was kept");
         fs::remove_dir_all(&dir).unwrap();
     }
 }

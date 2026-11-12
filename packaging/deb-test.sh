@@ -1,5 +1,5 @@
 #!/bin/sh
-# Install, remove and purge test for trindle-folders; run as root on the desktop.
+# Install, remove and purge test for trindle-folders. Run as root on the desktop:
 set -u
 deb=${1:?give the .deb}
 fail=0

@@ -1,4 +1,4 @@
-// What the sidebar lists: the pinned folders and the places, and keeping them.
+//! What the sidebar lists: the pinned folders and the places, and keeping them.
 
 use std::path::{Path, PathBuf};
 

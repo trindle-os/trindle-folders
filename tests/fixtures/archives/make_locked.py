@@ -16,8 +16,10 @@ WHEN = 1767323045
 DOS_TIME = (3 << 11) | (4 << 5) | (5 // 2)
 DOS_DATE = ((2026 - 1980) << 9) | (1 << 5) | 2
 
+
 def salt(tag, n):
     return hashlib.sha256(b"trindle test salt " + tag).digest()[:n]
+
 
 def openssl(cipher, key, data, iv=None, decrypt=False):
     cmd = ["openssl", "enc", "-" + cipher, "-K", key.hex(), "-nopad"]
@@ -27,12 +29,15 @@ def openssl(cipher, key, data, iv=None, decrypt=False):
         cmd.append("-d")
     return subprocess.run(cmd, input=data, capture_output=True, check=True).stdout
 
+
+
 CRC_TABLE = []
 for i in range(256):
     c = i
     for _ in range(8):
         c = (c >> 1) ^ 0xEDB88320 if c & 1 else c >> 1
     CRC_TABLE.append(c)
+
 
 def old_lock(data, check, tag):
     """Zip's first lock: twelve bytes in front, the last a check."""
@@ -52,6 +57,7 @@ def old_lock(data, check, tag):
         stir(b)
     return bytes(out)
 
+
 def aes_lock(data, strength, tag):
     """WinZip's AES: salt, two check bytes, the bytes, ten bytes of HMAC."""
     salt_len, key_len = {1: (8, 16), 2: (12, 24), 3: (16, 32)}[strength]
@@ -64,9 +70,11 @@ def aes_lock(data, strength, tag):
     locked = bytes(a ^ b for a, b in zip(data, pad))
     return s + fits + locked + hmac.new(mac_key, locked, hashlib.sha1).digest()[:10]
 
+
 def deflate(data):
     z = zlib.compressobj(9, zlib.DEFLATED, -15)
     return z.compress(data) + z.flush()
+
 
 def zip_of(entries):
     """entries: (name, mode, data, how) where how is None for open, "old",
@@ -107,7 +115,10 @@ def zip_of(entries):
     out += central + struct.pack("<IHHHHIIH", 0x06054B50, 0, 0, len(entries), len(entries), len(central), len(out), 0)
     return bytes(out)
 
+
+
 AES_ID = bytes([0x06, 0xF1, 0x07, 0x01])
+
 
 def num(v):
     for i in range(8):
@@ -116,12 +127,14 @@ def num(v):
             return bytes([first]) + (v & ((1 << (8 * i)) - 1)).to_bytes(i, "little")
     return b"\xff" + v.to_bytes(8, "little")
 
+
 def sz_key(power, s):
     typed = PASSWORD.encode("utf-16-le")
     h = hashlib.sha256()
     for i in range(1 << power):
         h.update(s + typed + i.to_bytes(8, "little"))
     return h.digest()
+
 
 def sz_lock(data, power, s, iv):
     """7z's lock: AES-256 in CBC, padded with noughts; and its settings."""
@@ -133,8 +146,10 @@ def sz_lock(data, power, s, iv):
         props += bytes([((len(s) - 1 if s else 0) << 4) | (len(iv) - 1 if iv else 0)]) + s + iv
     return locked, props
 
+
 def coder(ident, props):
     return bytes([len(ident) | (0x20 if props else 0)]) + ident + (num(len(props)) + props if props else b"")
+
 
 def streams(pack_pos, pack_size, coders, sizes, crc, files=None):
     """The part of a header that says where one block is and how it is
@@ -155,12 +170,14 @@ def streams(pack_pos, pack_size, coders, sizes, crc, files=None):
         out += b"\x0a\x01" + b"".join(struct.pack("<I", zlib.crc32(f)) for f in files) + b"\x00"
     return out + b"\x00"
 
+
 def bits(flags):
     out = bytearray((len(flags) + 7) // 8)
     for i, on in enumerate(flags):
         if on:
             out[i // 8] |= 0x80 >> (i % 8)
     return bytes(out)
+
 
 def sevenz(things, squeeze, power, lock_names, odd=False):
     """things: (name, mode, data or None for a folder). The files with bytes
@@ -204,7 +221,9 @@ def sevenz(things, squeeze, power, lock_names, odd=False):
     start = struct.pack("<QQI", len(body), len(head), zlib.crc32(head))
     return b"7z\xbc\xaf\x27\x1c\x00\x04" + struct.pack("<I", zlib.crc32(start)) + start + body + head
 
+
 FILE, FOLDER, LINK = 0o100644, 0o040755, 0o120777
+
 
 def main(out):
     plain = [("hello.txt", FILE, HELLO), ("docs/note.txt", FILE, NOTE), ("docs/blank.txt", FILE, b""), ("docs", FOLDER, None)]
@@ -224,5 +243,6 @@ def main(out):
         with open(out + "/" + name, "wb") as f:
             f.write(data)
         print(name, len(data))
+
 
 main(sys.argv[1])

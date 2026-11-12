@@ -1,4 +1,4 @@
-// What only the person may press in Folders: Share with AI programs, and the password window. Made-up presses (a plugin's) never reach them.
+//! What only the person may press in Folders: Share with AI programs, and the password window. Made-up presses (a plugin's) never reach them.
 
 pub const PASSWORD_WINDOW: &str = "trindle-keyring";
 

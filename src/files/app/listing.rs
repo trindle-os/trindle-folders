@@ -1,4 +1,4 @@
-// Reading each pane's place and putting its items in order.
+//! Reading each pane's place and putting its items in order.
 
 use std::path::{Path, PathBuf};
 

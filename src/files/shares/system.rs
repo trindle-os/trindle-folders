@@ -1,4 +1,4 @@
-// The programs that list a computer's shares and mount and unmount them, with the login the one rule let go.
+//! The programs that list a computer's shares and mount and unmount them, with the login the one rule let go.
 
 #[cfg(not(test))]
 use std::path::{Path, PathBuf};

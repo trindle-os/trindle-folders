@@ -1,4 +1,4 @@
-// Files on the clipboard: the toolkit's rules, and where Folders notes what it last cut.
+//! Files on the clipboard: the toolkit's rules, and where Folders notes what it last cut.
 
 use std::path::PathBuf;
 

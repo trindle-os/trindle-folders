@@ -1,4 +1,4 @@
-// Tests dragging files between Folders and another program.
+//! Tests dragging files between Folders and another program.
 
 use std::path::{Path, PathBuf};
 use std::rc::Rc;

@@ -1,4 +1,4 @@
-// 7z, read: the numbers and shapes its headers are written in.
+//! 7z, read: the numbers and shapes its headers are written in.
 
 pub(super) mod header;
 pub(super) mod lock;

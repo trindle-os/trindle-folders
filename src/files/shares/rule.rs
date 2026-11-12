@@ -1,4 +1,4 @@
-// The one rule for what is sent to a computer at an address, and the words the card says of it.
+//! The one rule for what is sent to a computer at an address, and the words the card says of it.
 
 use crate::common::smb::Login;
 use crate::toolkit::t;
@@ -56,8 +56,7 @@ pub(super) fn same_address(a: &str, b: &str) -> bool {
     matches!((a.parse::<std::net::IpAddr>(), b.parse::<std::net::IpAddr>()), (Ok(a), Ok(b)) if a == b)
 }
 
-#[allow(clippy::too_many_arguments)]
-pub fn choose(server: &str, address: Option<&str>, trust: Trust, typed: Option<Login>, used: Option<Used>,
+pub fn choose(address: Option<&str>, trust: Trust, typed: Option<Login>, used: Option<Used>,
               kept: impl FnOnce() -> Option<Login>, seen: impl FnOnce(&Login) -> Vec<(String, u64)>, now: u64) -> (Sends, bool) {
     if let Some(login) = typed {
         return match (address, trust) {
@@ -80,7 +79,6 @@ pub fn choose(server: &str, address: Option<&str>, trust: Trust, typed: Option<L
         }
     }
     let before: Vec<String> = used.map(|u| u.at).into_iter().collect();
-    let _ = server;
     match kept() {
         Some(login) => {
             let seen = seen(&login);

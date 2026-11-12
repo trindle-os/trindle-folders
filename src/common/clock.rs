@@ -1,4 +1,4 @@
-// The time of day in this computer's own time zone, read from the C library, which follows /etc/localtime and TZ.
+//! The time of day in this computer's own time zone, read from the C
 
 use std::ffi::CString;
 use std::time::{SystemTime, UNIX_EPOCH};

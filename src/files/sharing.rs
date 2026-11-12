@@ -1,4 +1,4 @@
-// Sharing one of the person's own folders on the home network.
+//! Sharing one of the person's own folders on the home network.
 
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
@@ -54,7 +54,7 @@ pub enum SharingMsg {
     NameDone,
     Write(bool),
     Guests(bool),
-    Password(String),
+    Password(Zeroizing<String>),
     SavePassword,
     ChangePassword,
     LetConnect,
@@ -137,7 +137,7 @@ pub fn view(f: &Form) -> Vec<Node<Msg>> {
     let mut out = Vec::new();
     let shared = f.on && f.was.is_some();
     let busy = f.busy.is_some();
-    out.push(toggle(t!("folders-sharing-share"), if shared { t!("folders-sharing-shared") } else { t!("folders-sharing-not-shared") }, f.on,
+    out.push(toggle(t!("folders-sharing-share"), if shared { t!("folders-sharing-shared") } else { "" }, f.on,
                     t!("folders-sharing-share-tip"), (busy, f.cannot.is_some() && !f.on), SharingMsg::On));
     out.push(column(vec![
         form_label(t!("folders-sharing-name")),
@@ -193,7 +193,7 @@ fn shared_lines(f: &Form, out: &mut Vec<Node<Msg>>) {
     }
     out.push(note(t!("folders-sharing-set-password", user = &user, n = PASSWORD_LEAST)));
     out.push(keyed(t!("folders-sharing-password"), vec![
-        entry(f.password.to_string(), t!("folders-sharing-password-tip"), |t| sharing_msg(SharingMsg::Password(t)))
+        entry(f.password.to_string(), t!("folders-sharing-password-tip"), |t| sharing_msg(SharingMsg::Password(t.into())))
             .secret().key("share-password").on_submit(sharing_msg(SharingMsg::SavePassword)).width(Length::Fill),
         button(crate::common::ui::SAVE_ICON, t!("folders-sharing-keep-password")).on_press(sharing_msg(SharingMsg::SavePassword))
             .off(f.password.chars().count() < PASSWORD_LEAST).off_because(crate::common::ui::wait_while(busy)),
@@ -327,7 +327,7 @@ impl Files {
                     self.share_now();
                 }
             }
-            SharingMsg::Password(t) => f.password = Zeroizing::new(t),
+            SharingMsg::Password(t) => f.password = t,
             SharingMsg::ChangePassword => f.changing = !f.changing,
             SharingMsg::SavePassword => self.share_password_saved(),
             SharingMsg::LetConnect => {
@@ -489,11 +489,11 @@ mod tests {
         f.go(0, Where::Folder(dir.clone()));
         f.ask(Act::Properties, 0, vec![photos.clone()]);
         let words = said(&f);
-        assert!(words.contains(&"switch: Share this folder with other computers on the home network".to_string()), "{words:?}");
+        assert!(words.contains(&"switch: Share on the home network".to_string()), "{words:?}");
         assert!(words.contains(&"entry: The name other computers see".to_string()));
-        assert!(words.contains(&"switch: Others can change files".to_string()));
-        assert!(words.contains(&"switch: Let in anyone, without a password".to_string()));
-        assert!(words.iter().any(|w| w.contains("fetches Samba")), "{words:?}");
+        assert!(words.contains(&"switch: Let others change files".to_string()));
+        assert!(words.contains(&"switch: Let anyone in without a password".to_string()));
+        assert!(words.iter().any(|w| w.contains("downloads Samba")), "{words:?}");
         assert_eq!(form(&f).name, "Photos");
         assert!(!form(&f).write && !form(&f).guests, "read only and with a password at first");
 
@@ -505,19 +505,19 @@ mod tests {
         });
         assert!(f.is_shared(&photos));
         let words = said(&f);
-        assert!(words.iter().any(|w| w.starts_with("Other computers find it under Network, as photos")), "{words:?}");
+        assert!(words.iter().any(|w| w.starts_with("On other computers, look under Network for photos")), "{words:?}");
         assert!(words.contains(&"button: Let other computers connect".to_string()), "{words:?}");
         f.update(Msg::Sharing(SharingMsg::LetConnect));
         assert!(!said(&f).contains(&"button: Let other computers connect".to_string()));
         assert!(said(&f).contains(&"secret: Sharing password".to_string()));
-        assert!(said(&f).iter().any(|w| w.contains("the password other computers use to open your shared folders")));
-        f.update(Msg::Sharing(SharingMsg::Password("short".into())));
+        assert!(said(&f).iter().any(|w| w.contains("Set a sharing password of at least")));
+        f.update(Msg::Sharing(SharingMsg::Password(String::from("short").into())));
         f.update(Msg::Sharing(SharingMsg::SavePassword));
         assert!(form(&f).problem.as_deref().is_some_and(|p| p.contains("at least 8")));
-        f.update(Msg::Sharing(SharingMsg::Password("secret-words".into())));
+        f.update(Msg::Sharing(SharingMsg::Password(String::from("secret-words").into())));
         f.update(Msg::Sharing(SharingMsg::SavePassword));
         assert!(pretend::with(|c| c.password));
-        assert!(said(&f).contains(&"button: Change the password other computers use".to_string()));
+        assert!(said(&f).contains(&"button: Change the sharing password".to_string()));
         pretend::with(|c| assert!(c.ran.iter().flatten().all(|w| !w.contains("secret-words"))));
         std::fs::remove_dir_all(&dir).unwrap();
     }
@@ -539,7 +539,7 @@ mod tests {
         f.update(Msg::Sharing(SharingMsg::Write(true)));
         f.update(Msg::Sharing(SharingMsg::Guests(true)));
         assert_eq!(pretend::with(|c| c.shares.clone()), [Shared { name: "photos".into(), path: photos.clone(), write: true, guests: true }]);
-        assert!(!said(&f).iter().any(|w| w.contains("password other computers")));
+        assert!(!said(&f).iter().any(|w| w.to_lowercase().contains("sharing password")));
         f.update(Msg::Sharing(SharingMsg::Name("Holiday".into())));
         f.update(Msg::Sharing(SharingMsg::NameDone));
         assert_eq!(pretend::with(|c| c.shares.iter().map(|s| s.name.clone()).collect::<Vec<_>>()), ["holiday"]);

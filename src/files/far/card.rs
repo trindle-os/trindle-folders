@@ -1,4 +1,4 @@
-// The Connect to a server card: what it asks, and how it is drawn.
+//! The Connect to a server card: what it asks, and how it is drawn.
 
 use std::path::PathBuf;
 
@@ -45,7 +45,7 @@ pub(super) fn why(e: Error, phone: bool) -> Why {
 
 pub struct Connect {
     pub address: String,
-    pub password: String,
+    pub password: crate::files::remote::Secret,
     pub key: String,
     pub busy: bool,
     pub question: Option<Question>,
@@ -57,7 +57,7 @@ pub struct Connect {
 
 impl Connect {
     pub fn new(address: String, pane: usize) -> Connect {
-        Connect { address, password: String::new(), key: String::new(), busy: false, question: None, bad: None, trust: false, trust_cert: None, pane }
+        Connect { address, password: Default::default(), key: String::new(), busy: false, question: None, bad: None, trust: false, trust_cert: None, pane }
     }
 }
 
@@ -84,7 +84,7 @@ pub fn view(c: &Connect, turn: u32) -> Node<Msg> {
             .key("faraddress").grab(turn).on_submit(far(FarMsg::Go)).on_escape(far(FarMsg::Close)),
     ];
     if ftp {
-        body.push(entry(c.password.clone(), t!("folders-far-connect-password"), |t| far(FarMsg::Password(t)))
+        body.push(entry(c.password.to_string(), t!("folders-far-connect-password"), |t| far(FarMsg::Password(t.into())))
             .secret().key("farpassword").on_submit(far(FarMsg::Go)).on_escape(far(FarMsg::Close)));
     } else {
         body.push(row(vec![

@@ -1,4 +1,4 @@
-// Facts about the things an act is done to, and the steps that undo it.
+//! Facts about the things an act is done to, and the steps that undo it.
 
 use std::fs::{self, OpenOptions};
 use std::os::unix::fs::MetadataExt;

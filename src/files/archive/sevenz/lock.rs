@@ -1,4 +1,4 @@
-// 7z's lock: the AES key made from a password and the reader that opens a block.
+//! 7z's lock: the AES key made from a password and the reader that opens a block.
 
 use std::io::{self, Read};
 

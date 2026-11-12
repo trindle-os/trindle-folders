@@ -7,7 +7,5 @@ cifs-utils          # mount.cifs: Windows and Samba shares open as ordinary fold
 nfs-common          # mount.nfs: NFS exports opened by address (nfs://server/export) show as ordinary folders
 smbclient           # lists the shared folders on a Windows or Samba computer
 openssh-client      # ssh and sftp places
-sshfs               # sftp places as ordinary folders
 libarchive13t64     # reads RAR, disc images and the other archives Folders has no reader of its own for
-xdg-utils           # xdg-open
 trindle-toolkit-lang

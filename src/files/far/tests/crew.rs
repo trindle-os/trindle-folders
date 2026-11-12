@@ -1,4 +1,4 @@
-// Files going to and from a server together: how many at once, in what order, and what a stop leaves.
+//! Files going to and from a server together: how many at once, in what order, and what a stop leaves.
 
 use std::fs::{self, File};
 use std::path::PathBuf;

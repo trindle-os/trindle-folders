@@ -1,4 +1,4 @@
-// Unpacking the blocks of a 7z and walking its files.
+//! Unpacking the blocks of a 7z and walking its files.
 
 use std::fs::File;
 use std::io::{self, BufReader, Read, Seek, SeekFrom};

@@ -1,4 +1,4 @@
-// Tests for archives read through libarchive in its box.
+//! Tests for archives read through libarchive in its box.
 
 mod frames;
 mod writers;

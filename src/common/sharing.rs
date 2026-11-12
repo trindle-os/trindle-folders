@@ -1,5 +1,6 @@
-// Sharing the person's own folders on the home network through Samba usershares.
+//! Sharing the person's own folders with other computers on the home network through Samba usershares, made and removed with `net usershare` as the person, never as root.
 
+use crate::toolkit::t;
 use std::path::{Path, PathBuf};
 
 pub const GROUP: &str = "sambashare";
@@ -33,19 +34,22 @@ pub fn installed() -> bool {
 pub fn valid_name(name: &str) -> Result<(), String> {
     let n = name.trim();
     if n.is_empty() {
-        return Err("Give the share a name.".into());
+        return Err(t!("folders-sharing-name-empty").into());
     }
     if n.chars().count() > NAME_MOST {
-        return Err(format!("A share's name can be at most {NAME_MOST} letters."));
+        return Err(t!("folders-sharing-name-long", most = NAME_MOST.to_string()));
     }
     if n.chars().any(|c| c.is_control() || BAD.contains(c)) {
-        return Err("A share's name cannot hold any of % < > * ? | / \\ + = ; : \" or a comma.".into());
+        return Err(t!("folders-sharing-name-bad-letters").into());
     }
     if n.ends_with('$') {
-        return Err("A name ending in $ would hide the share, so it is not used.".into());
+        return Err(t!("folders-sharing-name-dollar").into());
+    }
+    if n.starts_with('-') {
+        return Err(t!("folders-sharing-name-dash").into());
     }
     if RESERVED.contains(&n.to_lowercase().as_str()) {
-        return Err(format!("Samba keeps the name {n} for itself. Choose another."));
+        return Err(t!("folders-sharing-name-reserved", name = n));
     }
     Ok(())
 }
@@ -53,8 +57,8 @@ pub fn valid_name(name: &str) -> Result<(), String> {
 pub fn name_for(folder: &Path) -> String {
     let own = folder.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
     let clean: String = own.chars().filter(|c| !c.is_control() && !BAD.contains(*c)).take(NAME_MOST).collect();
-    let clean = clean.trim().trim_end_matches('$').trim().to_string();
-    if clean.is_empty() || valid_name(&clean).is_err() { "Shared".into() } else { clean }
+    let clean = clean.trim().trim_end_matches('$').trim_start_matches('-').trim().to_string();
+    if clean.is_empty() || valid_name(&clean).is_err() { t!("folders-sharing-default-name").into() } else { clean }
 }
 
 pub fn add_argv(s: &Shared) -> Vec<String> {
@@ -102,26 +106,26 @@ pub fn problem_of(err: &str) -> Problem {
 pub fn words_of(err: &str) -> String {
     let l = err.to_lowercase();
     if l.contains("directories we own") {
-        return "Only folders that belong to you can be shared.".into();
+        return t!("folders-sharing-only-yours-short").into();
     }
     if l.contains("valid system user name") {
-        return "That name is someone's login on this computer, so a share cannot have it. Choose another.".into();
+        return t!("folders-sharing-name-is-login").into();
     }
     if l.contains("not a valid share name") || l.contains("invalid char") {
-        return "A share's name cannot hold any of % < > * ? | / \\ + = ; : \" or a comma.".into();
+        return t!("folders-sharing-name-bad-letters").into();
     }
     if l.contains("guest") && (l.contains("not allowed") || l.contains("allow guests")) {
-        return "This computer's Samba settings do not allow shares without a password.".into();
+        return t!("folders-sharing-no-guests-allowed").into();
     }
     if l.contains("maximum number") {
-        return "This computer already shares as many folders as it allows.".into();
+        return t!("folders-sharing-too-many").into();
     }
     if l.contains("is not a directory") || l.contains("cannot stat") || l.contains("no such file") {
-        return "That folder is no longer there.".into();
+        return t!("folders-sharing-folder-gone").into();
     }
     let last = err.trim().lines().last().unwrap_or("").trim();
     let last = last.strip_prefix("net usershare add:").or_else(|| last.strip_prefix("net usershare delete:")).unwrap_or(last).trim();
-    if last.is_empty() { "Samba did not say why.".into() } else { format!("Samba said: {last}") }
+    if last.is_empty() { t!("folders-sharing-samba-silent").into() } else { t!("folders-sharing-samba-said", said = last) }
 }
 
 pub fn quote(word: &str) -> String {
@@ -139,9 +143,11 @@ pub fn in_group(argv: Vec<String>, through_sg: bool) -> Vec<String> {
 #[cfg_attr(test, allow(dead_code))]
 fn group_entry(user: &str) -> Option<(u32, bool)> {
     let name = std::ffi::CString::new(GROUP).ok()?;
+    let mut buf = vec![0u8; 64 * 1024];
     unsafe {
-        let g = libc::getgrnam(name.as_ptr());
-        if g.is_null() {
+        let mut entry: libc::group = std::mem::zeroed();
+        let mut g: *mut libc::group = std::ptr::null_mut();
+        if libc::getgrnam_r(name.as_ptr(), &mut entry, buf.as_mut_ptr().cast(), buf.len(), &mut g) != 0 || g.is_null() {
             return None;
         }
         let mut listed = false;
@@ -255,11 +261,11 @@ pub fn let_guests_in(folder: &Path, write: bool) -> Result<(), String> {
     for p in kept_out(folder, write) {
         let m = std::fs::metadata(&p).map_err(|e| e.to_string())?;
         if m.uid() != me {
-            return Err(format!("{} belongs to someone else, so it cannot be opened to guests from here.", p.display()));
+            return Err(t!("folders-sharing-guests-not-yours", path = p.display().to_string()));
         }
         let add = if p == folder { if write { 0o007 } else { 0o005 } } else { 0o001 };
         std::fs::set_permissions(&p, std::fs::Permissions::from_mode(m.permissions().mode() & 0o7777 | add))
-            .map_err(|e| format!("{} could not be changed: {e}", p.display()))?;
+            .map_err(|e| t!("folders-sharing-guests-not-changed", path = p.display().to_string(), why = e.to_string()))?;
     }
     Ok(())
 }
@@ -346,10 +352,10 @@ mod real {
     fn setup_words(err: &str) -> String {
         let l = err.to_lowercase();
         if l.contains("could not resolve") || l.contains("temporary failure") || l.contains("failed to fetch") {
-            return "Samba could not be fetched: this computer seems to be offline. Connect to the internet and try again.".into();
+            return t!("folders-sharing-setup-offline").into();
         }
         if l.contains("could not get lock") || l.contains("dpkg was interrupted") {
-            return "Samba could not be put in while something else is installing. Try again in a few minutes.".into();
+            return t!("folders-sharing-setup-busy").into();
         }
         admin_error(err)
     }
@@ -524,6 +530,7 @@ mod tests {
     fn names_are_checked() {
         assert!(valid_name("Photos").is_ok());
         assert!(valid_name("Holiday photos 2026").is_ok());
+        assert!(valid_name("-l").is_err() && valid_name(" -x Music").is_err(), "a name read as an option of net");
         for bad in ["", "  ", "a/b", "a:b", "a,b", "hidden$", "global", "IPC$", "line\nbreak", &"x".repeat(81)] {
             assert!(valid_name(bad).is_err(), "{bad:?}");
         }
@@ -538,11 +545,11 @@ mod tests {
         assert_eq!(problem_of("net usershare: cannot open usershare directory /var/lib/samba/usershares. Error Permission denied"), Problem::NotSetUp);
         assert_eq!(problem_of("net usershare: usershares are currently disabled"), Problem::NotSetUp);
         assert_eq!(words_of("net usershare add: cannot share path /etc as we are restricted to only sharing directories we own."),
-                   "Only folders that belong to you can be shared.");
-        assert!(words_of("net usershare add: share name john is already a valid system user name.").contains("login"));
+                   "You can only share folders that belong to you.");
+        assert!(words_of("net usershare add: share name john is already a valid system user name.").contains("account name"));
         assert!(words_of("net usershare add: guest_ok=y requested but the \"usershare allow guests\" parameter is not enabled by this server.")
             .contains("without a password"));
-        assert_eq!(words_of("net usershare add: something new\n"), "Samba said: something new");
+        assert_eq!(words_of("net usershare add: something new\n"), "Samba's message: something new");
         assert!(!words_of("x").contains('\u{2014}'));
     }
 

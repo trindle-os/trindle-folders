@@ -1,4 +1,4 @@
-// Finding files by name or by what is written inside them, and the quick filter that narrows a folder as the person types.
+//! Finding files: by name below a folder, by what is written inside, and the quick filter that narrows the folder shown. Capitals and accents never matter.
 
 use std::borrow::Cow;
 use std::collections::VecDeque;

@@ -1,4 +1,4 @@
-// What the window holds for acts: the hooks it is given, what it says, and what is picked.
+//! What the window holds for acts: the hooks it is given, what it says, and what is picked.
 
 use std::path::{Path, PathBuf};
 

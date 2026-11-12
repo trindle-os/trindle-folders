@@ -1,4 +1,4 @@
-// Test: nothing in Folders waits on a name that could block.
+//! Nothing in Folders, Text or the plugins' code waits on a name. A pipe can be given any name, and opening it the plain way waits for a writer that never comes.
 
 use std::collections::BTreeMap;
 

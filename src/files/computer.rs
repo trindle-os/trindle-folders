@@ -1,4 +1,4 @@
-// Storage: a page of every drive and partition a person would open.
+//! Storage: a page of every drive and partition a person would open, from the one reader the sidebar uses (common::volumes).
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -381,7 +381,7 @@ mod tests {
             f.kept.set_panel(true, None);
             let said = shown(&f);
             assert!(said.lines().filter(|l| *l == page_name()).count() >= 3, "the sidebar, the tab and the path say it: {said}");
-            let rest = said.replace("This computer's disk", "").replace("A disk in this computer", "");
+            let rest = said.replace("System disk", "").replace("Internal disk", "");
             assert!(!rest.to_lowercase().contains("this computer"), "the old name is still shown: {rest}");
             assert!(!said.lines().any(|l| l.trim() == "Computer"), "nor the name before that: {said}");
         }
@@ -432,7 +432,7 @@ mod tests {
         let net = [PathBuf::from("/mnt/backup"), PathBuf::from("/run/media/john/Photos on nas")];
         let c = cards(&drives("/run/media/john/HOLIDAY"), &shares, &phones, &net);
         let said: Vec<(&str, &str)> = c.iter().map(|c| (c.name.as_str(), c.kind)).collect();
-        assert_eq!(said, [("Trindle", "This computer's disk"), ("Films", "A disk in this computer"), ("HOLIDAY", "USB drive"),
+        assert_eq!(said, [("Trindle", "System disk"), ("Films", "Internal disk"), ("HOLIDAY", "USB drive"),
                           ("PHOTOS", "Memory card"), ("32.0 GB", "USB drive"), ("John's phone", "Phone or tablet"),
                           ("Photos on nas", "Network share"), ("backup", "Network share")]);
         assert_eq!(c[0].at.as_deref(), Some(Path::new("/")));
@@ -449,11 +449,11 @@ mod tests {
     fn a_card_says_how_full_it_is_in_words_as_well_as_by_its_bar() {
         let c = cards(&drives("/run/media/john/HOLIDAY"), &[], &[], &[]);
         let gb = 1_000_000_000u64;
-        assert_eq!(words(&c[0], Some((244 * gb, 12 * gb))), "Almost full: 12.0 GB free of 256.0 GB");
+        assert_eq!(words(&c[0], Some((244 * gb, 12 * gb))), "Very nearly full: 12.0 GB free of 256.0 GB");
         assert_eq!(words(&c[0], Some((100 * gb, 156 * gb))), "156.0 GB free of 256.0 GB");
-        assert_eq!(words(&c[2], Some((28 * gb, 4 * gb))), "Nearly full: 4.0 GB free of 32.0 GB");
+        assert_eq!(words(&c[2], Some((28 * gb, 4 * gb))), "Getting full: 4.0 GB free of 32.0 GB");
         assert_eq!(words(&c[2], None), "32.0 GB");
-        assert_eq!(words(&c[1], None), "Not mounted, 32.0 GB");
+        assert_eq!(words(&c[1], None), "Not opened yet, 32.0 GB");
         assert_eq!(words(&c[4], None), "Locked, 32.0 GB");
         assert_eq!((count_words(1), count_words(5)), ("1 drive".to_string(), "5 drives".to_string()));
     }
@@ -528,7 +528,7 @@ mod tests {
         assert_eq!(f.cols[0].at, Where::Folder(stick.clone()));
         f.go(0, Where::Computer);
         f.update(Msg::Computer(ComputerMsg::Eject(id(&f, "PHOTOS"))));
-        assert!(f.drives.is_busy("mmc0p1") && f.said.contains("Putting PHOTOS away"), "{}", f.said);
+        assert!(f.drives.is_busy("mmc0p1") && f.said.contains("Ejecting PHOTOS"), "{}", f.said);
         f.said.clear();
         f.update(Msg::Computer(ComputerMsg::Eject(id(&f, "PHOTOS"))));
         assert_eq!(f.said, super::super::drives::Drives::busy());

@@ -1,36 +1,54 @@
 
+# machine translated (Brazilian Portuguese), not yet reviewed by a person.
 
-folders-meta-link = isto é um atalho
+# Reason given when a file to read or change is a link, not the file itself.
+folders-meta-link = isto é um atalho, não um arquivo
 
-folders-meta-damaged = notas da foto danificadas: { $why }
+# Reason given when a photo's notes cannot be read; the cause follows, already written out.
+folders-meta-damaged = os detalhes da câmera da foto estão danificados porque { $why }
 
-folders-meta-bad-out-of-reach = um bloco está fora de alcance
+# Cause of damaged photo notes: a block points outside the notes.
+folders-meta-bad-out-of-reach = uma parte aponta para fora deles
 
-folders-meta-bad-block-past-end = um bloco passa do fim
+# Cause of damaged photo notes: a block goes beyond the end.
+folders-meta-bad-block-past-end = uma parte passa do fim deles
 
-folders-meta-bad-no-tiff = sem cabeçalho TIFF
+# Cause of damaged photo notes: the notes have no TIFF header.
+folders-meta-bad-no-tiff = falta o cabeçalho TIFF deles
 
-folders-meta-bad-too-big = grande demais
+# Cause of damaged photo notes: the notes are much too large.
+folders-meta-bad-too-big = eles são grandes demais
 
-folders-meta-bad-jpeg-parts = as partes do JPEG não se alinham
+# Cause of damaged photo notes: the parts of a JPEG photo do not line up.
+folders-meta-bad-jpeg-parts = as partes do JPEG não se encaixam
 
-folders-meta-bad-jpeg-past-end = uma parte do JPEG passa do fim
+# Cause of damaged photo notes: a part of a JPEG photo goes beyond the end.
+folders-meta-bad-jpeg-past-end = uma parte do JPEG passa do fim do arquivo
 
-folders-meta-bad-png-past-end = uma parte do PNG passa do fim
+# Cause of damaged photo notes: a part of a PNG photo goes beyond the end.
+folders-meta-bad-png-past-end = uma parte do PNG passa do fim do arquivo
 
-folders-meta-bad-png-empty = o PNG não tem imagem
+# Cause of damaged photo notes: a PNG file holds no picture.
+folders-meta-bad-png-empty = o PNG não tem nenhuma imagem dentro
 
-folders-meta-refuse-date = a data da foto deve ser parecida com 2026:01:02 03:04:05
+# Reason a photo's date taken is refused: it is not written like the example.
+folders-meta-refuse-date = a data da foto deve ser escrita assim: 2026:01:02 03:04:05
 
+# Reason a photo's note is refused: it holds a nul character.
 folders-meta-refuse-nul = uma nota não pode conter um caractere nulo
 
-folders-meta-refuse-way-up = o lado de cima deve ser de 1 a 8
+# Reason a photo's way-up setting is refused: it is not from 1 to 8.
+folders-meta-refuse-way-up = a configuração de qual lado fica para cima deve ser um número de 1 a 8
 
-folders-meta-refuse-too-long = as notas são longas demais para caber em um JPEG
+# Reason a photo's notes are refused: they are too long to fit in a JPEG.
+folders-meta-refuse-too-long = os detalhes da câmera são longos demais para caber em um JPEG
 
-folders-meta-only-jpeg-png = As Pastas só podem alterar as notas em fotos JPEG e PNG
+# Reason notes cannot be changed in a file that is not a JPEG or PNG photo.
+folders-meta-only-jpeg-png = os detalhes da câmera só podem ser alterados em fotos JPEG e PNG
 
-folders-meta-no-room = não há mais espaço
+# Reason a change to a song or photo was not begun: the drive has no room for the copy.
+folders-meta-no-room = não há mais espaço na unidade
 
-folders-meta-tag-too-big = a etiqueta é grande demais
+# Reason a song's tag is refused: the tag is too big.
+folders-meta-tag-too-big = os detalhes da música são grandes demais
 

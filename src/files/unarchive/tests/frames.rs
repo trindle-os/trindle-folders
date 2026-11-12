@@ -1,4 +1,4 @@
-// What the child sends and how Folders reads it.
+//! What the child sends and how Folders reads it.
 
 use crate::files::unarchive::{HAS_BYTES, LOCKED, MARK, MISSING, NO_MEMORY, SELF, UNKNOWN, UNSUPPORTED};
 use crate::files::unarchive::child::{asked, serve};
@@ -91,10 +91,10 @@ fn what_is_no_archive_or_is_damaged_ends_with_the_reason() {
     assert_eq!(reason(&frames_of("plain", b"just some words, not an archive at all", Need::All, &[])), Trouble::Unknown.to_string());
     assert_eq!(reason(&frames_of("empty", b"", Need::All, &[])), Trouble::Unknown.to_string());
     let rar = rar5(&[(b"big.bin", 0o100_644, &[7u8; 5000])]);
-    assert_eq!(reason(&frames_of("cut", &rar[..rar.len() - 3000], Need::All, &[])), "it is damaged or cut short");
+    assert_eq!(reason(&frames_of("cut", &rar[..rar.len() - 3000], Need::All, &[])), "it's damaged or incomplete");
     let mut bent = rar.clone();
     bent[20] ^= 1;
-    assert_eq!(reason(&frames_of("bent", &bent, Need::All, &[])), "it is damaged or cut short");
+    assert_eq!(reason(&frames_of("bent", &bent, Need::All, &[])), "it's damaged or incomplete");
 }
 
 #[test]

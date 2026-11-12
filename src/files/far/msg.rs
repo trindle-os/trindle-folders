@@ -1,4 +1,4 @@
-// What the window does with each message about a server or phone.
+//! What the window does with each message about a server or phone.
 
 use std::path::PathBuf;
 
@@ -203,7 +203,7 @@ impl Files {
         let Some(Dialog::Connect(c)) = &mut self.dialog else { return };
         let p = c.pane;
         let user = a.user.clone().unwrap_or_default();
-        let password = if c.password.is_empty() { a.password.clone().unwrap_or_default() } else { c.password.clone() };
+        let password: crate::files::remote::Secret = if c.password.is_empty() { a.password.clone().unwrap_or_default() } else { c.password.clone() };
         if !user.is_empty() && !password.is_empty() {
             let login = crate::common::smb::Login::typed(&user.replacen(';', "\\", 1), &password);
             if login.check().is_ok() {
@@ -221,7 +221,7 @@ impl Files {
                 self.watch_also(dir);
             }
             let seen = changed_time(&path);
-            self.far.fetched.insert(path, Copied { far, seen, sending: false, again: false });
+            self.far.fetched.entry(path).or_insert(Copied { far, seen, sending: false, again: false });
             self.say(t!("folders-far-opened-copy", name = &name), false);
         }
     }

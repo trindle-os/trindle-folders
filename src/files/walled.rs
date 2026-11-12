@@ -1,4 +1,4 @@
-// Thumbnails of files Trindle does not read itself, made by a program shut inside bubblewrap.
+//! Thumbnails of files Trindle does not read itself, made by a program shut inside bubblewrap.
 
 use std::collections::HashMap;
 use std::ffi::OsString;

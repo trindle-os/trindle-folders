@@ -1,4 +1,4 @@
-// Tests for archives.
+//! Tests for archives.
 
 mod boxed;
 mod locked;

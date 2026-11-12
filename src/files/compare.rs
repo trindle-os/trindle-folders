@@ -1,4 +1,4 @@
-// Comparing two folders: every name is put in one of four lists (left only, right only, the same, different).
+//! Comparing two folders: every name in either is put in one of four
 
 use std::cell::Cell;
 use std::collections::BTreeMap;

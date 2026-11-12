@@ -1,4 +1,4 @@
-// What an act holds and says: a job, a question, the clipboard, a drag, and where things are let go.
+//! What an act holds and says: a job, a question, the clipboard, a drag, and where things are let go.
 
 use std::fs;
 use std::path::PathBuf;

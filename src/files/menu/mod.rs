@@ -1,4 +1,4 @@
-// The right-click menu: what it offers for what is picked, which of its rows are kept in sub-menus, and what each row does.
+//! The right-click menu: what it offers for what is picked, which of its
 
 mod act;
 mod fold;
@@ -77,7 +77,6 @@ pub enum Act {
     SortBy(usize),
     GroupBy(usize),
     Flip,
-    Hidden,
     Undo,
     Redo,
     Settings,

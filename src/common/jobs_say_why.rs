@@ -1,4 +1,4 @@
-// A control the program will refuse while a job runs is greyed out and says why, so a page never looks frozen.
+//! A control the program will refuse while a job runs is greyed out and
 
 use super::save_is_a_word::all_lines;
 
